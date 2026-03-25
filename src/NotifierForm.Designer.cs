@@ -194,6 +194,7 @@ namespace MinimalFirewall
             MinimizeBox = false;
             MinimumSize = new Size(365, 255);
             Name = "NotifierForm";
+            ShowInTaskbar = false;
             StartPosition = FormStartPosition.CenterScreen;
             Text = "Connection Blocked";
             ResumeLayout(false);

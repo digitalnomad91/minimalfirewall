@@ -126,6 +126,7 @@ namespace MinimalFirewall
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
             this.MinimizeBox = false;
+            this.ShowInTaskbar = false;
             this.Name = "CreateProgramRuleForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
             this.Text = "Create Program Rule";
