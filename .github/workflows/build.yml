@@ -24,18 +24,25 @@ jobs:
         with:
           dotnet-version: '10.x'
 
+      # The project uses a COM reference (NetFwTypeLib) which requires the full .NET
+      # Framework MSBuild — the dotnet CLI MSBuild will error with MSB4803 otherwise.
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
       - name: Restore NuGet packages
         run: dotnet restore src/MinimalFirewall-NET8.csproj
 
       - name: Publish single-file exe
+        shell: pwsh
         run: |
-          dotnet publish src/MinimalFirewall-NET8.csproj `
-            -c Release `
-            -p:PublishSingleFile=true `
-            -p:IncludeNativeLibrariesForSelfExtract=true `
-            -p:DebugType=None `
-            -p:DebugSymbols=false `
-            -o ./publish
+          msbuild src\MinimalFirewall-NET8.csproj `
+            /t:Publish `
+            /p:Configuration=Release `
+            /p:PublishSingleFile=true `
+            /p:IncludeNativeLibrariesForSelfExtract=true `
+            /p:DebugType=None `
+            /p:DebugSymbols=false `
+            "/p:PublishDir=${{ github.workspace }}\publish\"
 
       # Rename to the canonical artifact filename expected by the WinGet workflow
       - name: Rename exe
