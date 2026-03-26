@@ -88,16 +88,16 @@ jobs:
           draft: false
           prerelease: ${{ contains(steps.ref.outputs.name, '-') }}
 
-      # ── On push to main: update rolling "latest" pre-release ──────────────
-      - name: Update rolling pre-release (main)
-        if: steps.ref.outputs.is_tag == 'false' && github.ref == 'refs/heads/main'
+      # ── On any non-tag push: update a per-branch rolling pre-release ─────────
+      - name: Update rolling pre-release (branch)
+        if: steps.ref.outputs.is_tag == 'false'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: latest
-          name: "Latest build (main)"
+          tag_name: branch-${{ steps.ref.outputs.name }}
+          name: "Branch build: ${{ steps.ref.outputs.name }}"
           body: |
-            Automatically updated on every push to `main`.
-            Download `Minimal.Firewall.exe` below to try the latest changes.
+            Auto-updated on every push to branch `${{ steps.ref.outputs.name }}`.
+            This is a pre-release build — not intended for production use.
           files: publish/Minimal.Firewall.exe
           draft: false
           prerelease: true
