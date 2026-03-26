@@ -21,7 +21,7 @@ namespace MinimalFirewall
         private FirewallActionsService _actionsService = null!;
 
         private SortableBindingList<TcpConnectionViewModel> _sortableList = new();
-        private readonly List<TcpConnectionViewModel> _terminatedConnections = new();
+        private readonly HashSet<TcpConnectionViewModel> _terminatedSet = new(ReferenceEqualityComparer.Instance);
         private bool _keepTerminated = false;
 
         // Cached GDI+ objects 
@@ -134,34 +134,28 @@ namespace MinimalFirewall
 
             if (_keepTerminated)
             {
-                // Find connections that just disappeared (terminated) and remember them
-                var prevActive = _sortableList.ToList();
-                foreach (var prev in prevActive)
+                // Build a lookup set of currently active connections by composite key
+                var activeKeys = new HashSet<string>(newActiveList.Select(ConnectionKey));
+
+                // Find connections that just disappeared (terminated)
+                foreach (var prev in _sortableList)
                 {
-                    bool stillActive = newActiveList.Any(c =>
-                        c.ProcessPath == prev.ProcessPath &&
-                        c.LocalPort == prev.LocalPort &&
-                        c.RemotePort == prev.RemotePort);
-                    bool alreadyTracked = _terminatedConnections.Any(t =>
-                        t.ProcessPath == prev.ProcessPath &&
-                        t.LocalPort == prev.LocalPort &&
-                        t.RemotePort == prev.RemotePort);
-                    if (!stillActive && !alreadyTracked)
+                    if (!activeKeys.Contains(ConnectionKey(prev)))
                     {
-                        _terminatedConnections.Add(prev);
+                        _terminatedSet.Add(prev);
                     }
                 }
+
+                // Remove any that have reappeared
+                _terminatedSet.RemoveWhere(t => activeKeys.Contains(ConnectionKey(t)));
+
                 // Build display list: active + terminated
                 displayList = new List<TcpConnectionViewModel>(newActiveList);
-                displayList.AddRange(_terminatedConnections
-                    .Where(t => !newActiveList.Any(c =>
-                        c.ProcessPath == t.ProcessPath &&
-                        c.LocalPort == t.LocalPort &&
-                        c.RemotePort == t.RemotePort)));
+                displayList.AddRange(_terminatedSet);
             }
             else
             {
-                _terminatedConnections.Clear();
+                _terminatedSet.Clear();
                 displayList = newActiveList;
             }
 
@@ -257,7 +251,7 @@ namespace MinimalFirewall
             if (e.RowIndex < 0 || e.RowIndex >= _sortableList.Count) return;
             var conn = _sortableList[e.RowIndex];
 
-            bool isTerminated = _keepTerminated && _terminatedConnections.Contains(conn);
+            bool isTerminated = _keepTerminated && _terminatedSet.Contains(conn);
 
             if (isTerminated)
             {
@@ -296,10 +290,13 @@ namespace MinimalFirewall
             _keepTerminated = keepTerminatedCheckBox.Checked;
             if (!_keepTerminated)
             {
-                _terminatedConnections.Clear();
+                _terminatedSet.Clear();
                 UpdateLiveConnectionsView();
             }
         }
+
+        private static string ConnectionKey(TcpConnectionViewModel c)
+            => $"{c.ProcessPath}|{c.LocalPort}|{c.RemotePort}|{c.RemoteAddress}";
 
         // --- Mouse & Selection Handling ---
 

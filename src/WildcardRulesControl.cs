@@ -201,9 +201,16 @@ namespace MinimalFirewall
             column.HeaderCell.SortGlyphDirection = ascending ? SortOrder.Ascending : SortOrder.Descending;
         }
 
+        private static readonly Dictionary<string, PropertyInfo?> _wildcardPropertyCache = new();
+
         private static object? GetPropertyValue(WildcardRule rule, string propertyName)
         {
-            return typeof(WildcardRule).GetProperty(propertyName)?.GetValue(rule);
+            if (!_wildcardPropertyCache.TryGetValue(propertyName, out var propInfo))
+            {
+                propInfo = typeof(WildcardRule).GetProperty(propertyName);
+                _wildcardPropertyCache[propertyName] = propInfo;
+            }
+            return propInfo?.GetValue(rule);
         }
     }
 }
