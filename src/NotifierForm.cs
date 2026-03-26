@@ -42,6 +42,8 @@ namespace MinimalFirewall
             {
                 pathLabel.BackColor = Color.FromArgb(45, 45, 48);
                 pathLabel.ForeColor = Color.White;
+                detailsRichTextBox.BackColor = Color.FromArgb(45, 45, 48);
+                detailsRichTextBox.ForeColor = Color.White;
             }
 
             // Set UI Text
@@ -51,7 +53,9 @@ namespace MinimalFirewall
             appNameLabel.Text = appName;
 
             pathLabel.Text = pending.AppPath;
-            pathLabel.WordWrap = false; 
+            pathLabel.WordWrap = false;
+
+            PopulateDetails(pending, isDarkMode);
 
             this.AcceptButton = this.ignoreButton;
 
@@ -71,6 +75,55 @@ namespace MinimalFirewall
             blockButton.FlatAppearance.MouseDownBackColor = ControlPaint.Dark(blockColor, 0.2f);
 
             SetupTempAllowMenu();
+        }
+
+        private void PopulateDetails(PendingConnectionViewModel pending, bool isDarkMode)
+        {
+            detailsRichTextBox.Clear();
+
+            Color labelColor = isDarkMode ? Color.LightSkyBlue : Color.RoyalBlue;
+            Color valColor = isDarkMode ? Color.White : Color.Black;
+            using Font boldFont = new Font(detailsRichTextBox.Font, FontStyle.Bold);
+
+            void AppendField(string label, string value)
+            {
+                detailsRichTextBox.SelectionStart = detailsRichTextBox.TextLength;
+                detailsRichTextBox.SelectionLength = 0;
+                detailsRichTextBox.SelectionColor = labelColor;
+                detailsRichTextBox.SelectionFont = boldFont;
+                detailsRichTextBox.AppendText(label + ": ");
+                detailsRichTextBox.SelectionColor = valColor;
+                detailsRichTextBox.SelectionFont = detailsRichTextBox.Font;
+                detailsRichTextBox.AppendText(value + Environment.NewLine);
+            }
+
+            // Direction with icon
+            string dirIcon = pending.Direction.Equals("Incoming", StringComparison.OrdinalIgnoreCase) ? "↓ " : "↑ ";
+            AppendField("Direction", dirIcon + pending.Direction);
+
+            // Remote address and port
+            string remote = "N/A";
+            if (!string.IsNullOrEmpty(pending.RemoteAddress))
+            {
+                remote = string.IsNullOrEmpty(pending.RemotePort)
+                    ? pending.RemoteAddress
+                    : $"{pending.RemoteAddress}:{pending.RemotePort}";
+            }
+            AppendField("Remote", remote);
+
+            // Protocol
+            if (!string.IsNullOrEmpty(pending.Protocol))
+            {
+                string protoDisplay = pending.Protocol switch
+                {
+                    "6" => "TCP",
+                    "17" => "UDP",
+                    "1" => "ICMPv4",
+                    "58" => "ICMPv6",
+                    _ => pending.Protocol
+                };
+                AppendField("Protocol", protoDisplay);
+            }
         }
 
         // Window Load: Restore position and ensure visibility

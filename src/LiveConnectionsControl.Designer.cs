@@ -5,6 +5,9 @@
         private System.ComponentModel.IContainer components = null;
         private System.Windows.Forms.Panel disabledPanel;
         private System.Windows.Forms.Label disabledLabel;
+        private System.Windows.Forms.Panel topToolbarPanel;
+        private System.Windows.Forms.Label lastRefreshedLabel;
+        private System.Windows.Forms.CheckBox keepTerminatedCheckBox;
 
         protected override void Dispose(bool disposing)
         {
@@ -40,16 +43,49 @@
             this.copyDetailsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.disabledPanel = new System.Windows.Forms.Panel();
             this.disabledLabel = new System.Windows.Forms.Label();
+            this.topToolbarPanel = new System.Windows.Forms.Panel();
+            this.lastRefreshedLabel = new System.Windows.Forms.Label();
+            this.keepTerminatedCheckBox = new System.Windows.Forms.CheckBox();
             ((System.ComponentModel.ISupportInitialize)(this.liveConnectionsDataGridView)).BeginInit();
             this.liveConnectionsContextMenu.SuspendLayout();
             this.disabledPanel.SuspendLayout();
+            this.topToolbarPanel.SuspendLayout();
             this.SuspendLayout();
+            // 
+            // topToolbarPanel
+            // 
+            this.topToolbarPanel.Controls.Add(this.lastRefreshedLabel);
+            this.topToolbarPanel.Controls.Add(this.keepTerminatedCheckBox);
+            this.topToolbarPanel.Dock = System.Windows.Forms.DockStyle.Top;
+            this.topToolbarPanel.Height = 32;
+            this.topToolbarPanel.Name = "topToolbarPanel";
+            this.topToolbarPanel.Padding = new System.Windows.Forms.Padding(4, 4, 4, 2);
+            // 
+            // lastRefreshedLabel
+            // 
+            this.lastRefreshedLabel.AutoSize = true;
+            this.lastRefreshedLabel.Dock = System.Windows.Forms.DockStyle.Right;
+            this.lastRefreshedLabel.Font = new System.Drawing.Font("Segoe UI", 8F);
+            this.lastRefreshedLabel.Name = "lastRefreshedLabel";
+            this.lastRefreshedLabel.Padding = new System.Windows.Forms.Padding(0, 4, 4, 0);
+            this.lastRefreshedLabel.Text = "Last updated: —";
+            // 
+            // keepTerminatedCheckBox
+            // 
+            this.keepTerminatedCheckBox.AutoSize = true;
+            this.keepTerminatedCheckBox.Dock = System.Windows.Forms.DockStyle.Left;
+            this.keepTerminatedCheckBox.Font = new System.Drawing.Font("Segoe UI", 8.5F);
+            this.keepTerminatedCheckBox.Name = "keepTerminatedCheckBox";
+            this.keepTerminatedCheckBox.Padding = new System.Windows.Forms.Padding(2, 4, 0, 0);
+            this.keepTerminatedCheckBox.Text = "Keep terminated connections";
+            this.keepTerminatedCheckBox.CheckedChanged += new System.EventHandler(this.keepTerminatedCheckBox_CheckedChanged);
             // 
             // liveConnectionsDataGridView
             // 
             this.liveConnectionsDataGridView.AllowUserToAddRows = false;
             this.liveConnectionsDataGridView.AllowUserToDeleteRows = false;
             this.liveConnectionsDataGridView.AllowUserToResizeRows = false;
+            this.liveConnectionsDataGridView.AllowUserToOrderColumns = true;
             this.liveConnectionsDataGridView.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
             this.liveConnectionsDataGridView.BackgroundColor = System.Drawing.SystemColors.Control;
             this.liveConnectionsDataGridView.BorderStyle = System.Windows.Forms.BorderStyle.None;
@@ -77,7 +113,7 @@
             this.liveConnectionsDataGridView.Dock = System.Windows.Forms.DockStyle.Fill;
             this.liveConnectionsDataGridView.EnableHeadersVisualStyles = false;
             this.liveConnectionsDataGridView.GridColor = System.Drawing.SystemColors.Control;
-            this.liveConnectionsDataGridView.Location = new System.Drawing.Point(0, 0);
+            this.liveConnectionsDataGridView.Location = new System.Drawing.Point(0, 32);
             this.liveConnectionsDataGridView.MultiSelect = false;
             this.liveConnectionsDataGridView.Name = "liveConnectionsDataGridView";
             this.liveConnectionsDataGridView.ReadOnly = true;
@@ -85,7 +121,7 @@
             this.liveConnectionsDataGridView.RowTemplate.Height = 28;
             this.liveConnectionsDataGridView.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
             this.liveConnectionsDataGridView.ShowCellToolTips = true;
-            this.liveConnectionsDataGridView.Size = new System.Drawing.Size(800, 600);
+            this.liveConnectionsDataGridView.Size = new System.Drawing.Size(800, 568);
             this.liveConnectionsDataGridView.TabIndex = 0;
             this.liveConnectionsDataGridView.CellFormatting += new System.Windows.Forms.DataGridViewCellFormattingEventHandler(this.liveConnectionsDataGridView_CellFormatting);
             this.liveConnectionsDataGridView.CellMouseDown += new System.Windows.Forms.DataGridViewCellMouseEventHandler(this.liveConnectionsDataGridView_CellMouseDown);
@@ -249,11 +285,14 @@
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.Controls.Add(this.disabledPanel);
             this.Controls.Add(this.liveConnectionsDataGridView);
+            this.Controls.Add(this.topToolbarPanel);
             this.Name = "LiveConnectionsControl";
             this.Size = new System.Drawing.Size(800, 600);
             ((System.ComponentModel.ISupportInitialize)(this.liveConnectionsDataGridView)).EndInit();
             this.liveConnectionsContextMenu.ResumeLayout(false);
             this.disabledPanel.ResumeLayout(false);
+            this.topToolbarPanel.ResumeLayout(false);
+            this.topToolbarPanel.PerformLayout();
             this.ResumeLayout(false);
         }
 

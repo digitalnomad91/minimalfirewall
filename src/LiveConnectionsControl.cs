@@ -21,11 +21,14 @@ namespace MinimalFirewall
         private FirewallActionsService _actionsService = null!;
 
         private SortableBindingList<TcpConnectionViewModel> _sortableList = new();
+        private readonly List<TcpConnectionViewModel> _terminatedConnections = new();
+        private bool _keepTerminated = false;
 
         // Cached GDI+ objects 
         private static readonly Brush HoverOverlayBrush = new SolidBrush(Color.FromArgb(25, Color.Black));
         private static readonly Color EstablishedColor = Color.FromArgb(204, 255, 204);
         private static readonly Color ListenColor = Color.FromArgb(255, 255, 204);
+        private static readonly Color TerminatedColor = Color.FromArgb(240, 240, 240);
 
         private int _hoveredRowIndex = -1;
 
@@ -109,6 +112,7 @@ namespace MinimalFirewall
             if (_appSettings == null) return;
             bool isEnabled = _appSettings.IsTrafficMonitorEnabled;
             liveConnectionsDataGridView.Visible = isEnabled;
+            topToolbarPanel.Visible = isEnabled;
             disabledPanel.Visible = !isEnabled;
         }
 
@@ -116,13 +120,50 @@ namespace MinimalFirewall
         {
             if (_viewModel == null) return;
 
+            // Update last-refreshed indicator
+            lastRefreshedLabel.Text = $"Last updated: {DateTime.Now:HH:mm:ss}";
+
             string? selectedIdentifier = null;
             if (TryGetSelectedConnection(out var currentConn) && currentConn != null)
             {
                 selectedIdentifier = currentConn.ProcessPath + currentConn.RemotePort;
             }
 
-            var newList = _viewModel.ActiveConnections.ToList();
+            var newActiveList = _viewModel.ActiveConnections.ToList();
+            List<TcpConnectionViewModel> displayList;
+
+            if (_keepTerminated)
+            {
+                // Find connections that just disappeared (terminated) and remember them
+                var prevActive = _sortableList.ToList();
+                foreach (var prev in prevActive)
+                {
+                    bool stillActive = newActiveList.Any(c =>
+                        c.ProcessPath == prev.ProcessPath &&
+                        c.LocalPort == prev.LocalPort &&
+                        c.RemotePort == prev.RemotePort);
+                    bool alreadyTracked = _terminatedConnections.Any(t =>
+                        t.ProcessPath == prev.ProcessPath &&
+                        t.LocalPort == prev.LocalPort &&
+                        t.RemotePort == prev.RemotePort);
+                    if (!stillActive && !alreadyTracked)
+                    {
+                        _terminatedConnections.Add(prev);
+                    }
+                }
+                // Build display list: active + terminated
+                displayList = new List<TcpConnectionViewModel>(newActiveList);
+                displayList.AddRange(_terminatedConnections
+                    .Where(t => !newActiveList.Any(c =>
+                        c.ProcessPath == t.ProcessPath &&
+                        c.LocalPort == t.LocalPort &&
+                        c.RemotePort == t.RemotePort)));
+            }
+            else
+            {
+                _terminatedConnections.Clear();
+                displayList = newActiveList;
+            }
 
             // apply sorting
             if (_appSettings != null)
@@ -135,24 +176,24 @@ namespace MinimalFirewall
                     var col = liveConnectionsDataGridView.Columns[sortCol];
                     if (!string.IsNullOrEmpty(col.DataPropertyName))
                     {
-                        _sortableList = new SortableBindingList<TcpConnectionViewModel>(newList);
+                        _sortableList = new SortableBindingList<TcpConnectionViewModel>(displayList);
                         var dir = sortOrd == (int)SortOrder.Ascending ? ListSortDirection.Ascending : ListSortDirection.Descending;
                         _sortableList.Sort(col.DataPropertyName, dir);
                         col.HeaderCell.SortGlyphDirection = (SortOrder)sortOrd;
                     }
                     else
                     {
-                        _sortableList = new SortableBindingList<TcpConnectionViewModel>(newList);
+                        _sortableList = new SortableBindingList<TcpConnectionViewModel>(displayList);
                     }
                 }
                 else
                 {
-                    _sortableList = new SortableBindingList<TcpConnectionViewModel>(newList);
+                    _sortableList = new SortableBindingList<TcpConnectionViewModel>(displayList);
                 }
             }
             else
             {
-                _sortableList = new SortableBindingList<TcpConnectionViewModel>(newList);
+                _sortableList = new SortableBindingList<TcpConnectionViewModel>(displayList);
             }
 
             liveConnectionsDataGridView.RowCount = _sortableList.Count;
@@ -216,8 +257,15 @@ namespace MinimalFirewall
             if (e.RowIndex < 0 || e.RowIndex >= _sortableList.Count) return;
             var conn = _sortableList[e.RowIndex];
 
+            bool isTerminated = _keepTerminated && _terminatedConnections.Contains(conn);
+
+            if (isTerminated)
+            {
+                e.CellStyle.BackColor = TerminatedColor;
+                e.CellStyle.ForeColor = Color.Gray;
+            }
             // Color code rows based on connection state
-            if (conn.State != null)
+            else if (conn.State != null)
             {
                 if (conn.State.Equals("Established", StringComparison.OrdinalIgnoreCase))
                 {
@@ -240,6 +288,16 @@ namespace MinimalFirewall
             {
                 e.CellStyle.SelectionBackColor = e.CellStyle.BackColor;
                 e.CellStyle.SelectionForeColor = e.CellStyle.ForeColor;
+            }
+        }
+
+        private void keepTerminatedCheckBox_CheckedChanged(object sender, EventArgs e)
+        {
+            _keepTerminated = keepTerminatedCheckBox.Checked;
+            if (!_keepTerminated)
+            {
+                _terminatedConnections.Clear();
+                UpdateLiveConnectionsView();
             }
         }
 

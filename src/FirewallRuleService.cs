@@ -430,6 +430,38 @@ namespace MinimalFirewall
             return ExecuteDeleteAndReturnNames(rule => string.Equals(rule.Grouping, groupName, StringComparison.OrdinalIgnoreCase));
         }
 
+        public void RenameGroup(string oldGroupName, string newGroupName)
+        {
+            if (string.IsNullOrEmpty(oldGroupName) || string.IsNullOrEmpty(newGroupName)) return;
+            INetFwPolicy2 firewallPolicy = GetLocalPolicy();
+            if (firewallPolicy == null) return;
+
+            INetFwRules? rulesCollection = null;
+            try
+            {
+                rulesCollection = firewallPolicy.Rules;
+                var rulesToUpdate = new List<INetFwRule2>();
+
+                foreach (INetFwRule2 rule in rulesCollection)
+                {
+                    if (rule != null && string.Equals(rule.Grouping, oldGroupName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        rulesToUpdate.Add(rule);
+                    }
+                }
+
+                foreach (var rule in rulesToUpdate)
+                {
+                    rule.Grouping = newGroupName;
+                    Marshal.ReleaseComObject(rule);
+                }
+            }
+            finally
+            {
+                if (rulesCollection != null) Marshal.ReleaseComObject(rulesCollection);
+            }
+        }
+
         public void DeleteAllMfwRules()
         {
             var rulesToRemove = GetRuleNamesAndRelease(rule =>

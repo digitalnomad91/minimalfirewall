@@ -78,6 +78,7 @@ namespace MinimalFirewall
             _dm = dm;
 
             systemChangesDataGridView.AutoGenerateColumns = false;
+            systemChangesDataGridView.AllowUserToOrderColumns = true;
 
             foreach (DataGridViewColumn col in systemChangesDataGridView.Columns)
             {
@@ -91,10 +92,35 @@ namespace MinimalFirewall
             auditSearchTextBox.Text = _appSettings.AuditSearchText;
             quarantineCheckBox.Checked = _appSettings.QuarantineMode;
 
-            toolTip1.SetToolTip(rebuildBaselineButton, "Unarchives all hidden rules, making them visible again in this list.");
+            // Add tooltip descriptions for controls
+            toolTip1.SetToolTip(rebuildBaselineButton,
+                "Unarchives all hidden/archived rules, making them visible again in this list.");
+            toolTip1.SetToolTip(quarantineCheckBox,
+                "When checked, any new firewall rule detected by an external application will be automatically archived (hidden) instead of shown.");
+
+            // Add explanatory description label to the top panel
+            AddDescriptionBanner();
 
             // Initialize cached font based on grid default
             _cachedBoldFont = new Font(systemChangesDataGridView.DefaultCellStyle.Font, FontStyle.Bold);
+        }
+
+        private void AddDescriptionBanner()
+        {
+            var descLabel = new Label
+            {
+                Text = "ℹ  The Audit tab tracks external changes to Windows Firewall rules — new, modified, or deleted rules not made by this application. " +
+                       "Use \"Rebuild Baseline\" to restore archived rules, and \"Quarantine New Rules\" to auto-archive rules created by other programs.",
+                Dock = DockStyle.Top,
+                AutoSize = false,
+                Height = 44,
+                Font = new Font("Segoe UI", 8.5F),
+                Padding = new Padding(6, 6, 6, 0),
+                TextAlign = ContentAlignment.MiddleLeft,
+                Name = "auditDescriptionLabel"
+            };
+            this.Controls.Add(descLabel);
+            descLabel.BringToFront();
         }
 
         private void OnSystemChangesUpdated()

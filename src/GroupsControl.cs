@@ -15,6 +15,8 @@ namespace MinimalFirewall
     {
         private FirewallGroupManager? _groupManager;
         private BackgroundFirewallTaskService? _backgroundTaskService;
+        private FirewallActionsService? _actionsService;
+        private AppSettings? _appSettings;
         private DarkModeCS? _dm;
 
         private BindingSource _bindingSource;
@@ -32,11 +34,14 @@ namespace MinimalFirewall
             EnableDoubleBuffering(groupsDataGridView);
         }
 
-        public void Initialize(FirewallGroupManager groupManager, BackgroundFirewallTaskService backgroundTaskService, DarkModeCS dm)
+        public void Initialize(FirewallGroupManager groupManager, BackgroundFirewallTaskService backgroundTaskService, DarkModeCS dm,
+            FirewallActionsService? actionsService = null, AppSettings? appSettings = null)
         {
             _groupManager = groupManager;
             _backgroundTaskService = backgroundTaskService;
             _dm = dm;
+            _actionsService = actionsService;
+            _appSettings = appSettings;
 
             groupsDataGridView.AutoGenerateColumns = false;
             groupsDataGridView.DataSource = _bindingSource;
@@ -114,6 +119,86 @@ namespace MinimalFirewall
                     }
                 }
             }
+        }
+
+        private void renameGroupToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (groupsDataGridView.SelectedRows.Count == 0 || _backgroundTaskService == null) return;
+            if (groupsDataGridView.SelectedRows[0].DataBoundItem is not FirewallGroup group) return;
+
+            string oldName = group.Name;
+            string? newName = PromptForGroupName("Rename Group", "Enter new group name:", oldName);
+
+            if (newName == null || string.Equals(newName, oldName, StringComparison.Ordinal)) return;
+
+            var payload = new RenameGroupPayload { OldGroupName = oldName, NewGroupName = newName };
+            _backgroundTaskService.EnqueueTask(new FirewallTask(FirewallTaskType.RenameGroup, payload, $"Renaming group '{oldName}'"));
+
+            // Refresh the view after rename
+            _ = DisplayGroupsAsync();
+        }
+
+        private void addGroupButton_Click(object sender, EventArgs e)
+        {
+            string? groupName = PromptForGroupName("Add Group", "Enter a name for the new group:", string.Empty);
+            if (string.IsNullOrWhiteSpace(groupName)) return;
+
+            if (_actionsService == null || _appSettings == null) return;
+
+            using var dialog = new CreateAdvancedRuleForm(_actionsService, _appSettings, groupName);
+            if (dialog.ShowDialog(this.FindForm()) == DialogResult.OK && dialog.RuleVm != null && _backgroundTaskService != null)
+            {
+                var payload = new CreateAdvancedRulePayload
+                {
+                    ViewModel = dialog.RuleVm,
+                    InterfaceTypes = dialog.RuleVm.InterfaceTypes,
+                    IcmpTypesAndCodes = dialog.RuleVm.IcmpTypesAndCodes
+                };
+                _backgroundTaskService.EnqueueTask(new FirewallTask(FirewallTaskType.CreateAdvancedRule, payload, $"Creating rule in group '{groupName}'"));
+                _ = DisplayGroupsAsync();
+            }
+        }
+
+        private static string? PromptForGroupName(string title, string prompt, string defaultValue)
+        {
+            using var form = new Form
+            {
+                Text = title,
+                ClientSize = new Size(380, 130),
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                StartPosition = FormStartPosition.CenterParent,
+                MaximizeBox = false,
+                MinimizeBox = false,
+                ShowInTaskbar = false
+            };
+
+            var label = new Label { Text = prompt, Location = new Point(12, 12), AutoSize = true };
+            var textBox = new TextBox { Location = new Point(12, 36), Width = 356, Text = defaultValue };
+            var okButton = new Button
+            {
+                Text = "OK",
+                DialogResult = DialogResult.OK,
+                Location = new Point(210, 72),
+                Width = 76
+            };
+            var cancelButton = new Button
+            {
+                Text = "Cancel",
+                DialogResult = DialogResult.Cancel,
+                Location = new Point(292, 72),
+                Width = 76
+            };
+
+            form.Controls.AddRange([label, textBox, okButton, cancelButton]);
+            form.AcceptButton = okButton;
+            form.CancelButton = cancelButton;
+
+            if (form.ShowDialog() == DialogResult.OK)
+            {
+                string result = textBox.Text.Trim();
+                return string.IsNullOrEmpty(result) ? null : result;
+            }
+            return null;
         }
 
         private void groupsDataGridView_CellClick(object sender, DataGridViewCellEventArgs e)

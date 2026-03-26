@@ -239,6 +239,7 @@ public enum FirewallTaskType
     DeleteUwpRules,
     DeleteAdvancedRules,
     DeleteGroup,
+    RenameGroup,
     DeleteWildcardRules,
     ProcessPendingConnection,
     AcceptForeignRule,
@@ -288,5 +289,6 @@ public record ForeignRuleChangePayload { public FirewallRuleChange Change { get;
 public record AllForeignRuleChangesPayload { public List<FirewallRuleChange> Changes { get; init; } = []; }
 public record CreateAdvancedRulePayload { public AdvancedRuleViewModel ViewModel { get; init; } = new(); public string InterfaceTypes { get; init; } = ""; public string IcmpTypesAndCodes { get; init; } = ""; }
 public record SetGroupEnabledStatePayload { public string GroupName { get; init; } = string.Empty; public bool IsEnabled { get; init; } }
+public record RenameGroupPayload { public string OldGroupName { get; init; } = string.Empty; public string NewGroupName { get; init; } = string.Empty; }
 public record UpdateWildcardRulePayload { public WildcardRule OldRule { get; init; } = new(); public WildcardRule NewRule { get; init; } = new(); }
 public record ImportRulesPayload { public string JsonContent { get; init; } = string.Empty; public bool Replace { get; init; } }

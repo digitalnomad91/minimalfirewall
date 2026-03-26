@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
+using System.Reflection;
 using System.Windows.Forms;
 using MinimalFirewall.TypedObjects;
 
@@ -27,6 +29,11 @@ namespace MinimalFirewall
             _wildcardRuleService = wildcardRuleService;
             _backgroundTaskService = backgroundTaskService;
             _appSettings = appSettings;
+
+            foreach (DataGridViewColumn col in wildcardDataGridView.Columns)
+            {
+                col.SortMode = DataGridViewColumnSortMode.Programmatic;
+            }
         }
 
         public void LoadRules()
@@ -170,6 +177,33 @@ namespace MinimalFirewall
                     e.FormattingApplied = true;
                 }
             }
+        }
+
+        private void wildcardDataGridView_ColumnHeaderMouseClick(object sender, DataGridViewCellMouseEventArgs e)
+        {
+            if (e.ColumnIndex < 0 || _bindingSource.DataSource is not BindingList<WildcardRule> list) return;
+
+            var column = wildcardDataGridView.Columns[e.ColumnIndex];
+            string propertyName = column.DataPropertyName;
+            if (string.IsNullOrEmpty(propertyName)) return;
+
+            bool ascending = column.HeaderCell.SortGlyphDirection != SortOrder.Ascending;
+            List<WildcardRule> sortedRules = ascending
+                ? list.OrderBy(r => GetPropertyValue(r, propertyName)).ToList()
+                : list.OrderByDescending(r => GetPropertyValue(r, propertyName)).ToList();
+
+            _bindingSource.DataSource = new BindingList<WildcardRule>(sortedRules);
+
+            foreach (DataGridViewColumn col in wildcardDataGridView.Columns)
+            {
+                col.HeaderCell.SortGlyphDirection = SortOrder.None;
+            }
+            column.HeaderCell.SortGlyphDirection = ascending ? SortOrder.Ascending : SortOrder.Descending;
+        }
+
+        private static object? GetPropertyValue(WildcardRule rule, string propertyName)
+        {
+            return typeof(WildcardRule).GetProperty(propertyName)?.GetValue(rule);
         }
     }
 }

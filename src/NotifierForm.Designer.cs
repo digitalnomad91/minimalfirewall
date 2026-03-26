@@ -9,6 +9,7 @@ namespace MinimalFirewall
         private System.Windows.Forms.Label infoLabel;
         private System.Windows.Forms.Label appNameLabel;
         private System.Windows.Forms.TextBox pathLabel;
+        private System.Windows.Forms.RichTextBox detailsRichTextBox;
         private System.Windows.Forms.CheckBox trustPublisherCheckBox;
         private System.Windows.Forms.Button createWildcardButton;
         private System.Windows.Forms.Button copyDetailsButton;
@@ -35,6 +36,7 @@ namespace MinimalFirewall
             infoLabel = new Label();
             appNameLabel = new Label();
             pathLabel = new TextBox();
+            detailsRichTextBox = new RichTextBox();
             trustPublisherCheckBox = new CheckBox();
             createWildcardButton = new Button();
             copyDetailsButton = new Button();
@@ -62,13 +64,13 @@ namespace MinimalFirewall
             appNameLabel.Location = new Point(4, 30);
             appNameLabel.Margin = new Padding(4, 0, 4, 0);
             appNameLabel.Name = "appNameLabel";
-            appNameLabel.Size = new Size(330, 27);
+            appNameLabel.Size = new Size(350, 27);
             appNameLabel.TabIndex = 1;
             appNameLabel.Text = "Application Name";
             // 
             // pathLabel
             // 
-            pathLabel.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            pathLabel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             pathLabel.BackColor = SystemColors.Control;
             pathLabel.BorderStyle = BorderStyle.None;
             pathLabel.Font = new Font("Segoe UI", 8F);
@@ -78,15 +80,31 @@ namespace MinimalFirewall
             pathLabel.Name = "pathLabel";
             pathLabel.ReadOnly = true;
             pathLabel.ScrollBars = ScrollBars.Vertical;
-            pathLabel.Size = new Size(330, 54);
+            pathLabel.Size = new Size(350, 40);
             pathLabel.TabIndex = 2;
             pathLabel.Text = "C:\\Path\\To\\Application.exe";
+            // 
+            // detailsRichTextBox
+            // 
+            detailsRichTextBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            detailsRichTextBox.BackColor = SystemColors.Control;
+            detailsRichTextBox.BorderStyle = BorderStyle.None;
+            detailsRichTextBox.Font = new Font("Segoe UI", 8.5F);
+            detailsRichTextBox.Location = new Point(4, 106);
+            detailsRichTextBox.Margin = new Padding(4, 3, 4, 3);
+            detailsRichTextBox.Name = "detailsRichTextBox";
+            detailsRichTextBox.ReadOnly = true;
+            detailsRichTextBox.ScrollBars = RichTextBoxScrollBars.None;
+            detailsRichTextBox.Size = new Size(350, 68);
+            detailsRichTextBox.TabIndex = 10;
+            detailsRichTextBox.TabStop = false;
+            detailsRichTextBox.Text = "";
             // 
             // trustPublisherCheckBox
             // 
             trustPublisherCheckBox.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             trustPublisherCheckBox.AutoSize = true;
-            trustPublisherCheckBox.Location = new Point(72, 128);
+            trustPublisherCheckBox.Location = new Point(72, 184);
             trustPublisherCheckBox.Margin = new Padding(4, 3, 4, 3);
             trustPublisherCheckBox.Name = "trustPublisherCheckBox";
             trustPublisherCheckBox.Size = new Size(142, 19);
@@ -98,7 +116,7 @@ namespace MinimalFirewall
             // createWildcardButton
             // 
             createWildcardButton.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
-            createWildcardButton.Location = new Point(4, 208);
+            createWildcardButton.Location = new Point(4, 264);
             createWildcardButton.Margin = new Padding(4, 3, 4, 3);
             createWildcardButton.Name = "createWildcardButton";
             createWildcardButton.Size = new Size(152, 32);
@@ -110,7 +128,7 @@ namespace MinimalFirewall
             // copyDetailsButton
             // 
             copyDetailsButton.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
-            copyDetailsButton.Location = new Point(18, 120);
+            copyDetailsButton.Location = new Point(18, 178);
             copyDetailsButton.Margin = new Padding(4, 3, 4, 3);
             copyDetailsButton.Name = "copyDetailsButton";
             copyDetailsButton.Size = new Size(46, 32);
@@ -123,7 +141,7 @@ namespace MinimalFirewall
             // 
             allowButton.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             allowButton.FlatStyle = FlatStyle.Flat;
-            allowButton.Location = new Point(4, 158);
+            allowButton.Location = new Point(4, 218);
             allowButton.Margin = new Padding(4, 3, 4, 3);
             allowButton.Name = "allowButton";
             allowButton.Size = new Size(98, 35);
@@ -135,7 +153,7 @@ namespace MinimalFirewall
             // tempAllowButton
             // 
             tempAllowButton.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            tempAllowButton.Location = new Point(169, 208);
+            tempAllowButton.Location = new Point(186, 264);
             tempAllowButton.Margin = new Padding(4, 3, 4, 3);
             tempAllowButton.Name = "tempAllowButton";
             tempAllowButton.Size = new Size(165, 35);
@@ -148,7 +166,7 @@ namespace MinimalFirewall
             // 
             blockButton.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             blockButton.FlatStyle = FlatStyle.Flat;
-            blockButton.Location = new Point(107, 158);
+            blockButton.Location = new Point(107, 218);
             blockButton.Margin = new Padding(4, 3, 4, 3);
             blockButton.Name = "blockButton";
             blockButton.Size = new Size(98, 35);
@@ -160,7 +178,7 @@ namespace MinimalFirewall
             // ignoreButton
             // 
             ignoreButton.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            ignoreButton.Location = new Point(226, 158);
+            ignoreButton.Location = new Point(251, 218);
             ignoreButton.Margin = new Padding(4, 3, 4, 3);
             ignoreButton.Name = "ignoreButton";
             ignoreButton.Size = new Size(98, 35);
@@ -178,7 +196,7 @@ namespace MinimalFirewall
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(365, 255);
+            ClientSize = new Size(365, 310);
             Controls.Add(ignoreButton);
             Controls.Add(blockButton);
             Controls.Add(tempAllowButton);
@@ -186,13 +204,14 @@ namespace MinimalFirewall
             Controls.Add(copyDetailsButton);
             Controls.Add(createWildcardButton);
             Controls.Add(trustPublisherCheckBox);
+            Controls.Add(detailsRichTextBox);
             Controls.Add(pathLabel);
             Controls.Add(appNameLabel);
             Controls.Add(infoLabel);
             Margin = new Padding(4, 3, 4, 3);
             MaximizeBox = false;
             MinimizeBox = false;
-            MinimumSize = new Size(365, 255);
+            MinimumSize = new Size(365, 310);
             Name = "NotifierForm";
             ShowInTaskbar = false;
             StartPosition = FormStartPosition.CenterScreen;

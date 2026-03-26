@@ -319,6 +319,7 @@ namespace MinimalFirewall
             this.dashboardDataGridView.AllowUserToAddRows = false;
             this.dashboardDataGridView.AllowUserToDeleteRows = false;
             this.dashboardDataGridView.AllowUserToResizeRows = false;
+            this.dashboardDataGridView.AllowUserToOrderColumns = true;
             this.dashboardDataGridView.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
             this.dashboardDataGridView.BackgroundColor = System.Drawing.SystemColors.Control;
             this.dashboardDataGridView.BorderStyle = System.Windows.Forms.BorderStyle.None;

@@ -88,6 +88,7 @@ namespace MinimalFirewall
             this.wildcardDataGridView.AllowUserToAddRows = false;
             this.wildcardDataGridView.AllowUserToDeleteRows = false;
             this.wildcardDataGridView.AllowUserToResizeRows = false;
+            this.wildcardDataGridView.AllowUserToOrderColumns = true;
             this.wildcardDataGridView.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
             this.wildcardDataGridView.BorderStyle = System.Windows.Forms.BorderStyle.None;
             this.wildcardDataGridView.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
@@ -109,6 +110,7 @@ namespace MinimalFirewall
             this.wildcardDataGridView.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
             this.wildcardDataGridView.Size = new System.Drawing.Size(800, 550);
             this.wildcardDataGridView.TabIndex = 1;
+            this.wildcardDataGridView.ColumnHeaderMouseClick += new System.Windows.Forms.DataGridViewCellMouseEventHandler(this.wildcardDataGridView_ColumnHeaderMouseClick);
             // 
             // colFolderPath
             // 

@@ -77,8 +77,8 @@ jobs:
           retention-days: 30
           if-no-files-found: error
 
-      # ── On tag push: create a GitHub Release ──────────────────────────────
-      - name: Create GitHub Release
+      # ── On tag push: create a versioned GitHub Release ────────────────────
+      - name: Create GitHub Release (tag)
         if: steps.ref.outputs.is_tag == 'true'
         uses: softprops/action-gh-release@v2
         with:
@@ -87,3 +87,17 @@ jobs:
           generate_release_notes: true
           draft: false
           prerelease: ${{ contains(steps.ref.outputs.name, '-') }}
+
+      # ── On push to main: update rolling "latest" pre-release ──────────────
+      - name: Update rolling pre-release (main)
+        if: steps.ref.outputs.is_tag == 'false' && github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: "Latest build (main)"
+          body: |
+            Automatically updated on every push to `main`.
+            Download `Minimal.Firewall.exe` below to try the latest changes.
+          files: publish/Minimal.Firewall.exe
+          draft: false
+          prerelease: true
