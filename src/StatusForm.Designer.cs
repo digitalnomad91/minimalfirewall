@@ -5,7 +5,7 @@ namespace MinimalFirewall
     {
         private System.ComponentModel.IContainer components = null;
         private System.Windows.Forms.Label statusLabel;
-        private System.Windows.Forms.ProgressBar progressBar;
+        private DarkModeForms.FlatProgressBar progressBar;
         private System.Windows.Forms.Label progressLabel;
         private System.Windows.Forms.Button okButton;
 
@@ -29,7 +29,7 @@ namespace MinimalFirewall
         {
             this.statusLabel = new System.Windows.Forms.Label();
             this.okButton = new System.Windows.Forms.Button();
-            this.progressBar = new System.Windows.Forms.ProgressBar();
+            this.progressBar = new DarkModeForms.FlatProgressBar();
             this.progressLabel = new System.Windows.Forms.Label();
             this.SuspendLayout();
             // 
@@ -87,6 +87,7 @@ namespace MinimalFirewall
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
             this.MinimizeBox = false;
+            this.ShowInTaskbar = false;
             this.Name = "StatusForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
             this.Text = "Scanning...";

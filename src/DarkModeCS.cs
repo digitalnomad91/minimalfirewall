@@ -18,6 +18,7 @@ namespace DarkModeForms
     {
         private static readonly ConditionalWeakTable<Control, NotificationInfo> _notificationInfo = new();
         private static readonly ConditionalWeakTable<Control, PaintEventHandler> _roundBorderPainters = new();
+        private static readonly ConditionalWeakTable<Control, EventHandler> _roundedRegionHandlers = new();
 
         private class NotificationInfo
         {
@@ -134,6 +135,10 @@ namespace DarkModeForms
             DWMWA_USE_IMMERSIVE_DARK_MODE = 20,
         }
 
+        private const int DWMWA_SYSTEMBACKDROP_TYPE = 38;
+        private const int DWMWA_MICA_EFFECT = 1029;
+        private const int DWM_SYSTEMBACKDROP_TYPE_MICA = 2;
+
         [DllImport("user32.dll")]
         private static extern int SendMessage(IntPtr hWnd, int wMsg, bool wParam, int lParam);
         private const int WM_SETREDRAW = 0x000B;
@@ -157,6 +162,9 @@ namespace DarkModeForms
           int nWidthEllipse,
           int nHeightEllipse
         );
+
+        [DllImport("Gdi32.dll", ExactSpelling = true, SetLastError = true)]
+        private static extern bool DeleteObject(IntPtr hObject);
 
         [DllImport("user32.dll", ExactSpelling = true, CharSet = CharSet.Auto)]
         private static extern IntPtr GetWindow(IntPtr hWnd, uint uCmd);
@@ -217,6 +225,7 @@ namespace DarkModeForms
                     (ColorMode == DisplayMode.SystemDefault && isDarkMode());
                 int[] DarkModeOn = useDark ? [0x01] : [0x00];
                 DwmSetWindowAttribute(OwnerForm.Handle, (int)DWMWINDOWATTRIBUTE.DWMWA_USE_IMMERSIVE_DARK_MODE, DarkModeOn, 4);
+                ApplyMicaEffect(OwnerForm.Handle);
             }
         }
 
@@ -345,6 +354,11 @@ namespace DarkModeForms
             {
                 control.GetType().GetProperty("BorderStyle")?.SetValue(control, BStyle);
             }
+            else if (control is FlatProgressBar flatPb)
+            {
+                flatPb.BackColor = OScolors.SurfaceDark;
+                flatPb.BarColor = OScolors.AccentOpaque;
+            }
             else if (control is NumericUpDown)
             {
                 ApplyThemeToHandle(control.Handle, "ItemsView");
@@ -360,8 +374,11 @@ namespace DarkModeForms
                     button.BackColor = OScolors.Control;
                 }
 
-                button.FlatAppearance.BorderColor = (button.FindForm()?.AcceptButton == button) ? OScolors.Accent : OScolors.Control;
+                Color btnBorderColor = (button.FindForm()?.AcceptButton == button) ? OScolors.Accent : OScolors.ControlDark;
+                button.FlatAppearance.BorderColor = btnBorderColor;
+                button.FlatAppearance.BorderSize = 1;
                 button.FlatAppearance.MouseOverBackColor = OScolors.ControlLight;
+                ApplyRoundedRegion(button, 4);
             }
             else if (control is ComboBox comboBox)
             {
@@ -707,39 +724,39 @@ namespace DarkModeForms
             OSThemeColors _ret = new();
             if (ColorMode <= 0)
             {
-                // Dark Mode
+                // Dark Mode - Windows 11 Fluent Design palette
                 _ret.Background = Color.FromArgb(32, 32, 32);
-                _ret.BackgroundDark = Color.FromArgb(18, 18, 18);
-                _ret.BackgroundLight = ControlPaint.Light(_ret.Background);
-                _ret.Surface = Color.FromArgb(43, 43, 43);
-                _ret.SurfaceLight = Color.FromArgb(50, 50, 50);
-                _ret.SurfaceDark = Color.FromArgb(29, 29, 29);
-                _ret.TextActive = Color.White;
-                _ret.TextInactive = Color.FromArgb(176, 176, 176);
+                _ret.BackgroundDark = Color.FromArgb(20, 20, 20);
+                _ret.BackgroundLight = Color.FromArgb(40, 40, 40);
+                _ret.Surface = Color.FromArgb(44, 44, 44);
+                _ret.SurfaceLight = Color.FromArgb(56, 56, 56);
+                _ret.SurfaceDark = Color.FromArgb(28, 28, 28);
+                _ret.TextActive = Color.FromArgb(255, 255, 255);
+                _ret.TextInactive = Color.FromArgb(162, 162, 162);
                 _ret.TextInAccent = GetReadableColor(_ret.Accent);
-                _ret.Control = Color.FromArgb(55, 55, 55);
-                _ret.ControlDark = ControlPaint.Dark(_ret.Control);
-                _ret.ControlLight = Color.FromArgb(67, 67, 67);
-                _ret.Primary = Color.FromArgb(3, 218, 198);
-                _ret.Secondary = Color.MediumSlateBlue;
+                _ret.Control = Color.FromArgb(60, 60, 60);
+                _ret.ControlDark = Color.FromArgb(48, 48, 48);
+                _ret.ControlLight = Color.FromArgb(76, 76, 76);
+                _ret.Primary = Color.FromArgb(0, 183, 195);
+                _ret.Secondary = Color.FromArgb(107, 105, 199);
             }
             else
             {
-                // Light Mode
-                _ret.Background = Color.FromArgb(244, 240, 235);
-                _ret.BackgroundDark = Color.FromArgb(225, 219, 213);
-                _ret.BackgroundLight = Color.FromArgb(250, 248, 245);
-                _ret.Surface = Color.FromArgb(250, 248, 245);
-                _ret.SurfaceLight = Color.White;
-                _ret.SurfaceDark = Color.FromArgb(230, 225, 219);
-                _ret.TextActive = Color.FromArgb(40, 38, 37); 
-                _ret.TextInactive = Color.FromArgb(115, 110, 106);
+                // Light Mode - Windows 11 Fluent Design palette
+                _ret.Background = Color.FromArgb(243, 243, 243);
+                _ret.BackgroundDark = Color.FromArgb(230, 230, 230);
+                _ret.BackgroundLight = Color.FromArgb(249, 249, 249);
+                _ret.Surface = Color.FromArgb(255, 255, 255);
+                _ret.SurfaceLight = Color.FromArgb(255, 255, 255);
+                _ret.SurfaceDark = Color.FromArgb(238, 238, 238);
+                _ret.TextActive = Color.FromArgb(28, 28, 28);
+                _ret.TextInactive = Color.FromArgb(96, 96, 96);
                 _ret.TextInAccent = Color.White;
-                _ret.Control = Color.FromArgb(235, 230, 224);
-                _ret.ControlDark = Color.FromArgb(205, 200, 194);
-                _ret.ControlLight = Color.FromArgb(250, 248, 245);
-                _ret.Primary = Color.FromArgb(0, 120, 215); 
-                _ret.Secondary = Color.MediumSlateBlue;
+                _ret.Control = Color.FromArgb(251, 251, 251);
+                _ret.ControlDark = Color.FromArgb(218, 218, 218);
+                _ret.ControlLight = Color.FromArgb(255, 255, 255);
+                _ret.Primary = Color.FromArgb(0, 120, 215);
+                _ret.Secondary = Color.FromArgb(107, 105, 199);
             }
 
             return _ret;
@@ -751,7 +768,9 @@ namespace DarkModeForms
             if (_Control?.Parent != null)
             {
                 _Control.GetType().GetProperty("BorderStyle")?.SetValue(_Control, BorderStyle.None);
-                _Control.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, _Control.Width, _Control.Height, Radius, Radius));
+                IntPtr hrgnInitial = CreateRoundRectRgn(0, 0, _Control.Width, _Control.Height, Radius, Radius);
+                _Control.Region = Region.FromHrgn(hrgnInitial);
+                DeleteObject(hrgnInitial);
 
                 if (_roundBorderPainters.TryGetValue(_Control, out PaintEventHandler? existingHandler))
                 {
@@ -872,6 +891,59 @@ namespace DarkModeForms
             }
             catch { }
             return 10;
+        }
+
+        public static int GetWindowsBuildNumber()
+        {
+            try
+            {
+                using var key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion");
+                if (key?.GetValue("CurrentBuildNumber") is string buildStr && int.TryParse(buildStr, out int build))
+                    return build;
+            }
+            catch { }
+            return Environment.OSVersion.Version.Build;
+        }
+
+        public static void ApplyMicaEffect(IntPtr handle)
+        {
+            if (handle == IntPtr.Zero) return;
+            try
+            {
+                int buildNumber = GetWindowsBuildNumber();
+                if (buildNumber >= 22621) // Windows 11 22H2+
+                {
+                    int[] backdropType = [DWM_SYSTEMBACKDROP_TYPE_MICA];
+                    DwmSetWindowAttribute(handle, DWMWA_SYSTEMBACKDROP_TYPE, backdropType, 4);
+                }
+                else if (buildNumber >= 22000) // Windows 11 21H2
+                {
+                    int[] micaEnabled = [1];
+                    DwmSetWindowAttribute(handle, DWMWA_MICA_EFFECT, micaEnabled, 4);
+                }
+            }
+            catch { }
+        }
+
+        public static void ApplyRoundedRegion(Control control, int radius = 4)
+        {
+            void UpdateRegion()
+            {
+                if (control.IsDisposed || control.Width <= 0 || control.Height <= 0) return;
+                int diameter = radius * 2;
+                IntPtr hrgn = CreateRoundRectRgn(0, 0, control.Width, control.Height, diameter, diameter);
+                control.Region = Region.FromHrgn(hrgn);
+                DeleteObject(hrgn);
+            }
+
+            UpdateRegion();
+
+            if (!_roundedRegionHandlers.TryGetValue(control, out _))
+            {
+                EventHandler handler = (s, e) => UpdateRegion();
+                control.SizeChanged += handler;
+                _roundedRegionHandlers.Add(control, handler);
+            }
         }
 
         private static Color GetReadableColor(Color backgroundColor)

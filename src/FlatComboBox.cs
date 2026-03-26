@@ -85,8 +85,19 @@ namespace DarkModeForms
                     #region Borders
                     using (var p = new Pen(Enabled ? BorderColor : SystemColors.ControlDark, UIHelpers.Scale(1, g)))
                     {
+                        int cornerRadius = UIHelpers.Scale(4, g);
                         Rectangle borderRect = new Rectangle(0, 0, clientRect.Width - 1, clientRect.Height - 1);
-                        g.DrawRectangle(p, borderRect);
+
+                        using (var borderPath = new GraphicsPath())
+                        {
+                            int diameter = cornerRadius * 2;
+                            borderPath.AddArc(borderRect.X, borderRect.Y, diameter, diameter, 180, 90);
+                            borderPath.AddArc(borderRect.Right - diameter, borderRect.Y, diameter, diameter, 270, 90);
+                            borderPath.AddArc(borderRect.Right - diameter, borderRect.Bottom - diameter, diameter, diameter, 0, 90);
+                            borderPath.AddArc(borderRect.X, borderRect.Bottom - diameter, diameter, diameter, 90, 90);
+                            borderPath.CloseFigure();
+                            g.DrawPath(p, borderPath);
+                        }
 
                         g.DrawLine(p, dropDownRect.Left, dropDownRect.Top, dropDownRect.Left, dropDownRect.Bottom);
                     }

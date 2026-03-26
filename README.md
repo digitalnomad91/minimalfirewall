@@ -78,10 +78,23 @@ Minimal Firewall offers a secure and integrated approach by managing the native 
 
 ## Screenshots
 
-![dashboard](https://github.com/deminimis/minimalfirewall/blob/main/assets/dashboard1.png)
-![rulees](https://github.com/deminimis/minimalfirewall/blob/main/assets/rules.png)
-![lighttheme](https://github.com/deminimis/minimalfirewall/blob/main/assets/lighttheme.png)
-![dashboard and poup](https://github.com/deminimis/minimalfirewall/blob/main/assets/dashboard2.png)
+### Windows 11 Fluent Design — Dark Mode
+![Dark Mode Dashboard](docs/screenshots/dark_mode_dashboard.png)
+
+### Windows 11 Fluent Design — Light Mode
+![Light Mode Dashboard](docs/screenshots/light_mode_dashboard.png)
+
+### Controls — Rounded Buttons · FlatComboBox · FlatProgressBar (Dark)
+![Controls Dark](docs/screenshots/controls_dark.png)
+
+### Controls — Light Mode
+![Controls Light](docs/screenshots/controls_light.png)
+
+### Connection-Blocked Popup (ShowInTaskbar = false)
+![Notifier Popup](docs/screenshots/notifier_popup.png)
+
+### FlatProgressBar — Gradient Fill · Rounded Corners · 60fps Marquee
+![Progress Bars](docs/screenshots/progress_bars.png)
 
 
 

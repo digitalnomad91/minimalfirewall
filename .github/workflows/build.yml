@@ -1,0 +1,89 @@
+name: Build and Release
+
+on:
+  push:
+    branches: ['**']
+    tags: ['v*.*.*']
+
+permissions:
+  contents: write   # needed to create releases and upload assets
+
+jobs:
+  build:
+    name: Build (win-x64)
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.x'
+
+      # The project uses a COM reference (NetFwTypeLib) which requires the full .NET
+      # Framework MSBuild — the dotnet CLI MSBuild will error with MSB4803 otherwise.
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Restore NuGet packages
+        run: dotnet restore src/MinimalFirewall-NET8.csproj
+
+      - name: Publish single-file exe
+        shell: pwsh
+        run: |
+          msbuild src\MinimalFirewall-NET8.csproj `
+            /t:Publish `
+            /p:Configuration=Release `
+            /p:PublishSingleFile=true `
+            /p:IncludeNativeLibrariesForSelfExtract=true `
+            /p:DebugType=None `
+            /p:DebugSymbols=false `
+            "/p:PublishDir=${{ github.workspace }}\publish\"
+
+      # Rename to the canonical artifact filename expected by the WinGet workflow
+      - name: Rename exe
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem ./publish -Filter "*.exe" | Select-Object -First 1
+          Rename-Item $exe.FullName "Minimal.Firewall.exe"
+
+      # ── Derive a clean name from the ref (branch or tag) ──────────────────
+      - name: Get ref name
+        id: ref
+        shell: bash
+        run: |
+          REF="${GITHUB_REF}"
+          if [[ "$REF" == refs/tags/* ]]; then
+            NAME="${REF#refs/tags/}"
+            echo "name=${NAME}"           >> "$GITHUB_OUTPUT"
+            echo "is_tag=true"            >> "$GITHUB_OUTPUT"
+          else
+            NAME="${REF#refs/heads/}"
+            NAME="${NAME//\//-}"          # replace / with -
+            echo "name=${NAME}"           >> "$GITHUB_OUTPUT"
+            echo "is_tag=false"           >> "$GITHUB_OUTPUT"
+          fi
+
+      # ── Upload artifact for every push (downloadable from Actions UI) ─────
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MinimalFirewall-${{ steps.ref.outputs.name }}
+          path: publish/Minimal.Firewall.exe
+          retention-days: 30
+          if-no-files-found: error
+
+      # ── On tag push: create a GitHub Release ──────────────────────────────
+      - name: Create GitHub Release
+        if: steps.ref.outputs.is_tag == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Minimal Firewall ${{ steps.ref.outputs.name }}
+          files: publish/Minimal.Firewall.exe
+          generate_release_notes: true
+          draft: false
+          prerelease: ${{ contains(steps.ref.outputs.name, '-') }}

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.ComponentModel;
 using System.Windows.Forms;
 using Timer = System.Windows.Forms.Timer;
@@ -9,7 +10,7 @@ namespace DarkModeForms
     public class FlatProgressBar : ProgressBar
     {
         private Timer marqueeTimer;
-        private int marqueePosition = 0;
+        private float marqueePosition = 0f;
         private ProgressBarStyle style = ProgressBarStyle.Blocks;
 
         [DefaultValue(ProgressBarStyle.Blocks)]
@@ -35,16 +36,16 @@ namespace DarkModeForms
         {
             this.SetStyle(ControlStyles.UserPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint, true);
             marqueeTimer = new Timer();
-            marqueeTimer.Interval = 30;
+            marqueeTimer.Interval = 16; // ~60 fps
             marqueeTimer.Tick += MarqueeTimer_Tick;
         }
 
         private void MarqueeTimer_Tick(object? sender, EventArgs e)
         {
-            marqueePosition += 5;
-            if (marqueePosition > this.Width)
+            marqueePosition += 3f;
+            if (marqueePosition > this.Width + this.Width / 3f)
             {
-                marqueePosition = -this.Width / 2;
+                marqueePosition = -this.Width / 3f;
             }
             this.Invalidate();
         }
@@ -52,8 +53,12 @@ namespace DarkModeForms
         private int min = 0;
         private int max = 100;
         private int val = 0;
-        [DefaultValue(typeof(Color), "Green")]
-        public Color BarColor { get; set; } = Color.Green;
+
+        [DefaultValue(typeof(Color), "SteelBlue")]
+        public Color BarColor { get; set; } = Color.SteelBlue;
+
+        [DefaultValue(6)]
+        public int CornerRadius { get; set; } = 6;
 
         protected override void OnResize(EventArgs e)
         {
@@ -64,34 +69,86 @@ namespace DarkModeForms
         protected override void OnPaint(PaintEventArgs e)
         {
             Graphics g = e.Graphics;
-            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.None;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+
+            Rectangle rect = this.ClientRectangle;
+            int r = Math.Min(CornerRadius, Math.Min(rect.Width, rect.Height) / 2);
 
             // Background
-            using Brush backBrush = new SolidBrush(this.BackColor);
-            g.FillRectangle(backBrush, this.ClientRectangle);
-
-            // Foreground Bar
-            using (SolidBrush brush = new SolidBrush(BarColor))
+            using (GraphicsPath bgPath = CreateRoundedPath(rect, r))
+            using (SolidBrush backBrush = new SolidBrush(this.BackColor))
             {
-                if (Style == ProgressBarStyle.Marquee)
-                {
-                    int marqueeWidth = this.Width / 3;
-                    Rectangle marqueeRect = new Rectangle(marqueePosition, 0, marqueeWidth, this.Height);
-                    if (marqueeRect.X < this.Width)
-                        g.FillRectangle(brush, marqueeRect);
-                }
-                else
-                {
-                    float percent = Math.Clamp((float)(val - min) / (max - min), 0f, 1f);
+                g.FillPath(backBrush, bgPath);
+            }
 
-                    Rectangle rect = this.ClientRectangle;
-                    rect.Width = (int)((float)rect.Width * percent);
-                    g.FillRectangle(brush, rect);
+            // Foreground bar
+            if (Style == ProgressBarStyle.Marquee)
+            {
+                int marqueeWidth = this.Width / 3;
+                int mx = (int)marqueePosition;
+                Rectangle marqueeRect = new Rectangle(mx, 0, marqueeWidth, this.Height);
+                Rectangle clippedRect = Rectangle.Intersect(rect, marqueeRect);
+                if (clippedRect.Width > 0 && clippedRect.Height > 0)
+                {
+                    using (GraphicsPath fgPath = CreateRoundedPath(clippedRect, r))
+                    using (LinearGradientBrush brush = new LinearGradientBrush(
+                        clippedRect, GetBarHighlight(BarColor), BarColor, LinearGradientMode.Vertical))
+                    {
+                        g.FillPath(brush, fgPath);
+                    }
+                }
+            }
+            else
+            {
+                float percent = (max > min)
+                    ? Math.Clamp((float)(val - min) / (max - min), 0f, 1f)
+                    : 0f;
+                int barWidth = (int)(rect.Width * percent);
+                if (barWidth > 0)
+                {
+                    Rectangle fillRect = new Rectangle(rect.X, rect.Y, barWidth, rect.Height);
+                    using (GraphicsPath fgPath = CreateRoundedPath(fillRect, r))
+                    using (LinearGradientBrush brush = new LinearGradientBrush(
+                        fillRect, GetBarHighlight(BarColor), BarColor, LinearGradientMode.Vertical))
+                    {
+                        g.FillPath(brush, fgPath);
+                    }
                 }
             }
 
-            // Border
-            Draw3DBorder(g);
+            // Subtle border
+            using (GraphicsPath borderPath = CreateRoundedPath(
+                Rectangle.Inflate(rect, -1, -1), Math.Max(r - 1, 0)))
+            using (Pen borderPen = new Pen(Color.FromArgb(60, 0, 0, 0), 1f))
+            {
+                g.DrawPath(borderPen, borderPath);
+            }
+        }
+
+        private static Color GetBarHighlight(Color color)
+        {
+            return Color.FromArgb(
+                color.A,
+                Math.Min(255, color.R + 45),
+                Math.Min(255, color.G + 45),
+                Math.Min(255, color.B + 45));
+        }
+
+        private static GraphicsPath CreateRoundedPath(Rectangle rect, int radius)
+        {
+            GraphicsPath path = new GraphicsPath();
+            if (radius <= 0 || rect.Width <= 0 || rect.Height <= 0)
+            {
+                path.AddRectangle(rect);
+                return path;
+            }
+            int diameter = radius * 2;
+            path.AddArc(rect.X, rect.Y, diameter, diameter, 180, 90);
+            path.AddArc(rect.Right - diameter, rect.Y, diameter, diameter, 270, 90);
+            path.AddArc(rect.Right - diameter, rect.Bottom - diameter, diameter, diameter, 0, 90);
+            path.AddArc(rect.X, rect.Bottom - diameter, diameter, diameter, 90, 90);
+            path.CloseFigure();
+            return path;
         }
 
         [DefaultValue(0)]
@@ -135,17 +192,6 @@ namespace DarkModeForms
 
                 base.Value = val;
                 if (val != oldValue) Invalidate();
-            }
-        }
-
-        private void Draw3DBorder(Graphics g)
-        {
-            int penWidth = UIHelpers.Scale(1, g);
-            if (penWidth < 1) penWidth = 1;
-
-            using (Pen pen = new Pen(Color.DarkGray, penWidth))
-            {
-                g.DrawRectangle(pen, 0, 0, this.Width - penWidth, this.Height - penWidth);
             }
         }
 
