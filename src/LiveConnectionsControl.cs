@@ -24,6 +24,25 @@ namespace MinimalFirewall
         private readonly HashSet<TcpConnectionViewModel> _terminatedSet = new(ReferenceEqualityComparer.Instance);
         private bool _keepTerminated = false;
 
+        // Auto-refresh timer
+        private System.Windows.Forms.Timer? _autoRefreshTimer;
+        private bool _isAutoRefreshing = true;
+        private bool _isRefreshing = false;
+        private const int AutoRefreshIntervalMs = 3000; // 3 seconds
+
+        // Spinner animation
+        private System.Windows.Forms.Timer? _spinnerTimer;
+        private int _spinnerFrame = 0;
+        private static readonly string[] SpinnerFrames = { "◐", "◓", "◑", "◒" };
+
+        // Row flash tracking — keys of recently new/changed rows and their fade timers
+        private readonly Dictionary<string, int> _flashingRows = new();
+        private System.Windows.Forms.Timer? _flashDecayTimer;
+        private static readonly Color FlashColor = Color.FromArgb(180, 220, 255);
+
+        // Previous snapshot for change detection
+        private readonly HashSet<string> _previousConnectionKeys = new();
+
         // Cached GDI+ objects 
         private static readonly Brush HoverOverlayBrush = new SolidBrush(Color.FromArgb(25, Color.Black));
         private static readonly Color EstablishedColor = Color.FromArgb(204, 255, 204);
@@ -31,6 +50,9 @@ namespace MinimalFirewall
         private static readonly Color TerminatedColor = Color.FromArgb(240, 240, 240);
 
         private int _hoveredRowIndex = -1;
+
+        // Callback for refresh — wired by MainForm
+        public Func<Task>? RefreshCallback { get; set; }
 
         public LiveConnectionsControl()
         {
@@ -67,8 +89,128 @@ namespace MinimalFirewall
 
             _viewModel.PropertyChanged += ViewModel_PropertyChanged;
 
+            // Flash decay timer — reduces flash alpha every 100ms
+            _flashDecayTimer = new System.Windows.Forms.Timer { Interval = 100 };
+            _flashDecayTimer.Tick += FlashDecayTimer_Tick;
+            _flashDecayTimer.Start();
+
             UpdateEnabledState();
             UpdateLiveConnectionsView();
+        }
+
+        // --- Auto-Refresh ---
+
+        public void StartAutoRefresh()
+        {
+            if (_autoRefreshTimer != null) return;
+            _autoRefreshTimer = new System.Windows.Forms.Timer { Interval = AutoRefreshIntervalMs };
+            _autoRefreshTimer.Tick += AutoRefreshTimer_Tick;
+            _autoRefreshTimer.Start();
+            UpdateRefreshButtonState();
+        }
+
+        public void StopAutoRefresh()
+        {
+            _autoRefreshTimer?.Stop();
+            _autoRefreshTimer?.Dispose();
+            _autoRefreshTimer = null;
+            HideSpinner();
+            UpdateRefreshButtonState();
+        }
+
+        private async void AutoRefreshTimer_Tick(object? sender, EventArgs e)
+        {
+            if (_isRefreshing || RefreshCallback == null) return;
+            await DoRefreshAsync();
+        }
+
+        private async void refreshButton_Click(object sender, EventArgs e)
+        {
+            if (_isRefreshing || RefreshCallback == null) return;
+            await DoRefreshAsync();
+        }
+
+        private async Task DoRefreshAsync()
+        {
+            if (_isRefreshing) return;
+            _isRefreshing = true;
+            ShowSpinner();
+
+            try
+            {
+                if (RefreshCallback != null)
+                    await RefreshCallback.Invoke();
+            }
+            catch (Exception)
+            {
+                // Ignore refresh errors
+            }
+            finally
+            {
+                _isRefreshing = false;
+                HideSpinner();
+            }
+        }
+
+        private void autoRefreshCheckBox_CheckedChanged(object sender, EventArgs e)
+        {
+            _isAutoRefreshing = autoRefreshCheckBox.Checked;
+            if (_isAutoRefreshing)
+                StartAutoRefresh();
+            else
+                StopAutoRefresh();
+        }
+
+        private void UpdateRefreshButtonState()
+        {
+            refreshButton.Enabled = !_isAutoRefreshing || !_isRefreshing;
+        }
+
+        private void ShowSpinner()
+        {
+            spinnerLabel.Visible = true;
+            _spinnerFrame = 0;
+            if (_spinnerTimer == null)
+            {
+                _spinnerTimer = new System.Windows.Forms.Timer { Interval = 150 };
+                _spinnerTimer.Tick += (s, e) =>
+                {
+                    _spinnerFrame = (_spinnerFrame + 1) % SpinnerFrames.Length;
+                    spinnerLabel.Text = SpinnerFrames[_spinnerFrame];
+                };
+            }
+            _spinnerTimer.Start();
+        }
+
+        private void HideSpinner()
+        {
+            _spinnerTimer?.Stop();
+            spinnerLabel.Visible = false;
+            spinnerLabel.Text = "";
+        }
+
+        // --- Flash Decay ---
+
+        private void FlashDecayTimer_Tick(object? sender, EventArgs e)
+        {
+            if (_flashingRows.Count == 0) return;
+
+            var keysToRemove = new List<string>();
+            var keysToDecay = new List<string>(_flashingRows.Keys);
+
+            foreach (var key in keysToDecay)
+            {
+                int alpha = _flashingRows[key] - 15;
+                if (alpha <= 0)
+                    keysToRemove.Add(key);
+                else
+                    _flashingRows[key] = alpha;
+            }
+
+            foreach (var key in keysToRemove)
+                _flashingRows.Remove(key);
+
+            liveConnectionsDataGridView.Invalidate();
         }
 
         private void UnsubscribeEvents()
@@ -82,14 +224,28 @@ namespace MinimalFirewall
         protected override void OnHandleDestroyed(EventArgs e)
         {
             UnsubscribeEvents();
+            StopAutoRefresh();
+            _flashDecayTimer?.Stop();
+            _flashDecayTimer?.Dispose();
+            _spinnerTimer?.Stop();
+            _spinnerTimer?.Dispose();
             base.OnHandleDestroyed(e);
         }
 
         public void OnTabDeselected()
         {
             UnsubscribeEvents();
+            StopAutoRefresh();
             if (_viewModel != null) _viewModel.StopMonitoring();
             UpdateEnabledState();
+        }
+
+        public void OnTabSelected()
+        {
+            if (_isAutoRefreshing && _appSettings?.IsTrafficMonitorEnabled == true)
+            {
+                StartAutoRefresh();
+            }
         }
 
         private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -130,6 +286,21 @@ namespace MinimalFirewall
             }
 
             var newActiveList = _viewModel.ActiveConnections.ToList();
+
+            // Detect new connections for flash effect
+            var currentKeys = new HashSet<string>(newActiveList.Select(ConnectionKey));
+            foreach (var conn in newActiveList)
+            {
+                string key = ConnectionKey(conn);
+                if (!_previousConnectionKeys.Contains(key))
+                {
+                    _flashingRows[key] = 200; // start flash at alpha 200
+                }
+            }
+            _previousConnectionKeys.Clear();
+            foreach (var key in currentKeys)
+                _previousConnectionKeys.Add(key);
+
             List<TcpConnectionViewModel> displayList;
 
             if (_keepTerminated)
@@ -252,8 +423,15 @@ namespace MinimalFirewall
             var conn = _sortableList[e.RowIndex];
 
             bool isTerminated = _keepTerminated && _terminatedSet.Contains(conn);
+            string connKey = ConnectionKey(conn);
 
-            if (isTerminated)
+            // Flash effect for new/changed rows
+            if (_flashingRows.TryGetValue(connKey, out int flashAlpha) && flashAlpha > 0)
+            {
+                e.CellStyle.BackColor = Color.FromArgb(flashAlpha, FlashColor.R, FlashColor.G, FlashColor.B);
+                e.CellStyle.ForeColor = Color.Black;
+            }
+            else if (isTerminated)
             {
                 e.CellStyle.BackColor = TerminatedColor;
                 e.CellStyle.ForeColor = Color.Gray;

@@ -8,6 +8,9 @@
         private System.Windows.Forms.Panel topToolbarPanel;
         private System.Windows.Forms.Label lastRefreshedLabel;
         private System.Windows.Forms.CheckBox keepTerminatedCheckBox;
+        private System.Windows.Forms.Button refreshButton;
+        private System.Windows.Forms.CheckBox autoRefreshCheckBox;
+        private System.Windows.Forms.Label spinnerLabel;
 
         protected override void Dispose(bool disposing)
         {
@@ -44,7 +47,10 @@
             this.disabledPanel = new System.Windows.Forms.Panel();
             this.disabledLabel = new System.Windows.Forms.Label();
             this.topToolbarPanel = new System.Windows.Forms.Panel();
+            this.spinnerLabel = new System.Windows.Forms.Label();
             this.lastRefreshedLabel = new System.Windows.Forms.Label();
+            this.autoRefreshCheckBox = new System.Windows.Forms.CheckBox();
+            this.refreshButton = new System.Windows.Forms.Button();
             this.keepTerminatedCheckBox = new System.Windows.Forms.CheckBox();
             ((System.ComponentModel.ISupportInitialize)(this.liveConnectionsDataGridView)).BeginInit();
             this.liveConnectionsContextMenu.SuspendLayout();
@@ -54,12 +60,48 @@
             // 
             // topToolbarPanel
             // 
+            this.topToolbarPanel.Controls.Add(this.spinnerLabel);
             this.topToolbarPanel.Controls.Add(this.lastRefreshedLabel);
+            this.topToolbarPanel.Controls.Add(this.autoRefreshCheckBox);
+            this.topToolbarPanel.Controls.Add(this.refreshButton);
             this.topToolbarPanel.Controls.Add(this.keepTerminatedCheckBox);
             this.topToolbarPanel.Dock = System.Windows.Forms.DockStyle.Top;
             this.topToolbarPanel.Height = 32;
             this.topToolbarPanel.Name = "topToolbarPanel";
             this.topToolbarPanel.Padding = new System.Windows.Forms.Padding(4, 4, 4, 2);
+            // 
+            // refreshButton
+            // 
+            this.refreshButton.Dock = System.Windows.Forms.DockStyle.Left;
+            this.refreshButton.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.refreshButton.FlatAppearance.BorderSize = 0;
+            this.refreshButton.Font = new System.Drawing.Font("Segoe UI", 8.5F);
+            this.refreshButton.Name = "refreshButton";
+            this.refreshButton.Size = new System.Drawing.Size(70, 26);
+            this.refreshButton.Text = "⟳ Refresh";
+            this.refreshButton.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.refreshButton.Click += new System.EventHandler(this.refreshButton_Click);
+            // 
+            // autoRefreshCheckBox
+            // 
+            this.autoRefreshCheckBox.AutoSize = true;
+            this.autoRefreshCheckBox.Dock = System.Windows.Forms.DockStyle.Left;
+            this.autoRefreshCheckBox.Font = new System.Drawing.Font("Segoe UI", 8.5F);
+            this.autoRefreshCheckBox.Name = "autoRefreshCheckBox";
+            this.autoRefreshCheckBox.Padding = new System.Windows.Forms.Padding(6, 4, 0, 0);
+            this.autoRefreshCheckBox.Text = "Auto-refresh";
+            this.autoRefreshCheckBox.Checked = true;
+            this.autoRefreshCheckBox.CheckedChanged += new System.EventHandler(this.autoRefreshCheckBox_CheckedChanged);
+            // 
+            // spinnerLabel
+            // 
+            this.spinnerLabel.AutoSize = true;
+            this.spinnerLabel.Dock = System.Windows.Forms.DockStyle.Right;
+            this.spinnerLabel.Font = new System.Drawing.Font("Segoe UI", 8F);
+            this.spinnerLabel.Name = "spinnerLabel";
+            this.spinnerLabel.Padding = new System.Windows.Forms.Padding(0, 4, 0, 0);
+            this.spinnerLabel.Text = "";
+            this.spinnerLabel.Visible = false;
             // 
             // lastRefreshedLabel
             // 
@@ -77,7 +119,7 @@
             this.keepTerminatedCheckBox.Font = new System.Drawing.Font("Segoe UI", 8.5F);
             this.keepTerminatedCheckBox.Name = "keepTerminatedCheckBox";
             this.keepTerminatedCheckBox.Padding = new System.Windows.Forms.Padding(2, 4, 0, 0);
-            this.keepTerminatedCheckBox.Text = "Keep terminated connections";
+            this.keepTerminatedCheckBox.Text = "Keep terminated";
             this.keepTerminatedCheckBox.CheckedChanged += new System.EventHandler(this.keepTerminatedCheckBox_CheckedChanged);
             // 
             // liveConnectionsDataGridView

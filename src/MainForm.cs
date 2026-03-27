@@ -163,6 +163,7 @@ namespace MinimalFirewall
             auditControl1.Initialize(_mainViewModel, _foreignRuleTracker, _firewallSentryService, _appSettings, dm);
             groupsControl1.Initialize(_groupManager, _backgroundTaskService, dm, _actionsService, _appSettings);
             liveConnectionsControl1.Initialize(_mainViewModel.TrafficMonitorViewModel, _appSettings, _iconService, _backgroundTaskService, _actionsService);
+            liveConnectionsControl1.RefreshCallback = async () => await RefreshLiveConnectionsQuietly();
 
             settingsControl1.Initialize(_appSettings, _startupService, _whitelistService, _actionsService, _activityLogger, _mainViewModel, appImageList, "Version " + Assembly.GetExecutingAssembly().GetName()?.Version?.ToString(3), dm);
         }
@@ -549,7 +550,6 @@ namespace MinimalFirewall
                 bool isDark = IsDarkModeEnabled;
                 var notifier = new NotifierForm(pending, isDark);
                 notifier.FormClosed += Notifier_FormClosed;
-                notifier.TopMost = true;
                 notifier.Show();
             }
         }
@@ -826,6 +826,11 @@ namespace MinimalFirewall
             if (_appSettings.IsTrafficMonitorEnabled && mainTabControl.SelectedTab == liveConnectionsTabPage)
             {
                 await LoadLiveConnectionsAsync();
+                liveConnectionsControl1.OnTabSelected();
+            }
+            else
+            {
+                liveConnectionsControl1.StopAutoRefresh();
             }
         }
 
@@ -896,6 +901,7 @@ namespace MinimalFirewall
                     case "liveConnectionsTabPage":
                         liveConnectionsControl1.UpdateEnabledState();
                         await LoadLiveConnectionsAsync();
+                        liveConnectionsControl1.OnTabSelected();
                         break;
                 }
             }
@@ -1050,6 +1056,25 @@ namespace MinimalFirewall
                 }
                 _isRefreshingData = false;
                 UpdateUIAfterRefresh();
+            }
+        }
+
+        /// <summary>Quiet refresh used by auto-refresh timer — no status dialog.</summary>
+        private async Task RefreshLiveConnectionsQuietly()
+        {
+            if (!_appSettings.IsTrafficMonitorEnabled || _isRefreshingData) return;
+
+            try
+            {
+                _isRefreshingData = true;
+                var token = ResetScanToken();
+                await _mainViewModel.RefreshLiveConnectionsAsync(token);
+                liveConnectionsControl1.UpdateLiveConnectionsView();
+            }
+            catch (OperationCanceledException) { }
+            finally
+            {
+                _isRefreshingData = false;
             }
         }
         #endregion

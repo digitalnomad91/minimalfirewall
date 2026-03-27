@@ -163,11 +163,32 @@ namespace MinimalFirewall
                     direction = ParseDirection(GetValueFromXml(xmlContent, "Direction"));
                 }
 
-                string remoteAddress = GetValueFromXml(xmlContent, "RemoteAddress");
-                string remotePort = GetValueFromXml(xmlContent, "RemotePort");
+                // Event 5157 uses SourceAddress/SourcePort and DestAddress/DestPort.
+                // For outgoing: remote = Dest; for incoming: remote = Source.
+                string sourceAddress = GetValueFromXml(xmlContent, "SourceAddress");
+                string sourcePort = GetValueFromXml(xmlContent, "SourcePort");
+                string destAddress = GetValueFromXml(xmlContent, "DestAddress");
+                string destPort = GetValueFromXml(xmlContent, "DestPort");
+
+                string remoteAddress, remotePort;
+                if (direction.Equals(DirectionInbound, StringComparison.OrdinalIgnoreCase))
+                {
+                    remoteAddress = sourceAddress;
+                    remotePort = sourcePort;
+                }
+                else
+                {
+                    remoteAddress = destAddress;
+                    remotePort = destPort;
+                }
+
                 string protocol = GetValueFromXml(xmlContent, "Protocol");
-                string filterId = GetValueFromXml(xmlContent, "FilterId");
-                string layerId = GetValueFromXml(xmlContent, "LayerId");
+                string filterId = GetValueFromXml(xmlContent, "FilterRTID");
+                if (string.IsNullOrEmpty(filterId))
+                    filterId = GetValueFromXml(xmlContent, "FilterId");
+                string layerId = GetValueFromXml(xmlContent, "LayerRTID");
+                if (string.IsNullOrEmpty(layerId))
+                    layerId = GetValueFromXml(xmlContent, "LayerId");
                 string xmlServiceName = GetValueFromXml(xmlContent, "ServiceName");
                 string pidStr = GetValueFromXml(xmlContent, "ProcessID");
 
