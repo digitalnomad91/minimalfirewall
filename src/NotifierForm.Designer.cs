@@ -87,7 +87,7 @@ namespace MinimalFirewall
             detailsRichTextBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             detailsRichTextBox.BackColor = SystemColors.Control;
             detailsRichTextBox.BorderStyle = BorderStyle.None;
-            detailsRichTextBox.Font = new Font("Cascadia Mono", 8.5F);
+            detailsRichTextBox.Font = new Font("Consolas", 8.5F);
             detailsRichTextBox.Location = new Point(16, 86);
             detailsRichTextBox.Margin = new Padding(4, 3, 4, 3);
             detailsRichTextBox.Name = "detailsRichTextBox";

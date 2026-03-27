@@ -21,7 +21,11 @@ namespace MinimalFirewall
         public bool TrustPublisher { get; private set; } = false;
         private readonly DarkModeCS dm;
 
-        // Slide-in animation
+        // Slide-in animation constants
+        private const int SlideAnimationIntervalMs = 12; // ~80fps for smooth animation
+        private const int SlideAnimationSteps = 20; // total steps (~240ms)
+        private const int TopMostDurationMs = 3000; // drop TopMost after this delay
+
         private int _targetY;
         private System.Windows.Forms.Timer? _slideTimer;
 
@@ -151,13 +155,12 @@ namespace MinimalFirewall
             this.Opacity = 0;
 
             // Slide-up animation
-            _slideTimer = new System.Windows.Forms.Timer { Interval = 12 };
+            _slideTimer = new System.Windows.Forms.Timer { Interval = SlideAnimationIntervalMs };
             int step = 0;
             _slideTimer.Tick += (s, ev) =>
             {
                 step++;
-                // Ease-out cubic over ~20 steps (~240ms)
-                double t = Math.Min(step / 20.0, 1.0);
+                double t = Math.Min(step / (double)SlideAnimationSteps, 1.0);
                 double ease = 1.0 - Math.Pow(1.0 - t, 3);
 
                 this.Top = startY - (int)((startY - _targetY) * ease);
@@ -175,7 +178,7 @@ namespace MinimalFirewall
             _slideTimer.Start();
 
             // Drop TopMost after a brief delay so it doesn't stay pinned forever
-            var topMostTimer = new System.Windows.Forms.Timer { Interval = 3000 };
+            var topMostTimer = new System.Windows.Forms.Timer { Interval = TopMostDurationMs };
             topMostTimer.Tick += (s, ev) =>
             {
                 this.TopMost = false;

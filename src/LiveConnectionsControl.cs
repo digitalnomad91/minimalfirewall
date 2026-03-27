@@ -28,17 +28,22 @@ namespace MinimalFirewall
         private System.Windows.Forms.Timer? _autoRefreshTimer;
         private bool _isAutoRefreshing = true;
         private bool _isRefreshing = false;
-        private const int AutoRefreshIntervalMs = 3000; // 3 seconds
+        private const int AutoRefreshIntervalMs = 3000;
+
+        // Animation constants
+        private const int SpinnerAnimationIntervalMs = 150;
+        private const int FlashInitialAlpha = 200;
+        private const int FlashDecayRate = 15; // alpha per 100ms tick
+        private const int FlashDecayIntervalMs = 100;
 
         // Spinner animation
         private System.Windows.Forms.Timer? _spinnerTimer;
         private int _spinnerFrame = 0;
         private static readonly string[] SpinnerFrames = { "◐", "◓", "◑", "◒" };
 
-        // Row flash tracking — keys of recently new/changed rows and their fade timers
+        // Row flash tracking
         private readonly Dictionary<string, int> _flashingRows = new();
         private System.Windows.Forms.Timer? _flashDecayTimer;
-        private static readonly Color FlashColor = Color.FromArgb(180, 220, 255);
 
         // Previous snapshot for change detection
         private readonly HashSet<string> _previousConnectionKeys = new();
@@ -48,6 +53,7 @@ namespace MinimalFirewall
         private static readonly Color EstablishedColor = Color.FromArgb(204, 255, 204);
         private static readonly Color ListenColor = Color.FromArgb(255, 255, 204);
         private static readonly Color TerminatedColor = Color.FromArgb(240, 240, 240);
+        private static readonly Color FlashColor = Color.FromArgb(180, 220, 255);
 
         private int _hoveredRowIndex = -1;
 
@@ -89,8 +95,8 @@ namespace MinimalFirewall
 
             _viewModel.PropertyChanged += ViewModel_PropertyChanged;
 
-            // Flash decay timer — reduces flash alpha every 100ms
-            _flashDecayTimer = new System.Windows.Forms.Timer { Interval = 100 };
+            // Flash decay timer — reduces flash alpha by FlashDecayRate every FlashDecayIntervalMs
+            _flashDecayTimer = new System.Windows.Forms.Timer { Interval = FlashDecayIntervalMs };
             _flashDecayTimer.Tick += FlashDecayTimer_Tick;
             _flashDecayTimer.Start();
 
@@ -172,7 +178,7 @@ namespace MinimalFirewall
             _spinnerFrame = 0;
             if (_spinnerTimer == null)
             {
-                _spinnerTimer = new System.Windows.Forms.Timer { Interval = 150 };
+                _spinnerTimer = new System.Windows.Forms.Timer { Interval = SpinnerAnimationIntervalMs };
                 _spinnerTimer.Tick += (s, e) =>
                 {
                     _spinnerFrame = (_spinnerFrame + 1) % SpinnerFrames.Length;
@@ -200,7 +206,7 @@ namespace MinimalFirewall
 
             foreach (var key in keysToDecay)
             {
-                int alpha = _flashingRows[key] - 15;
+                int alpha = _flashingRows[key] - FlashDecayRate;
                 if (alpha <= 0)
                     keysToRemove.Add(key);
                 else
@@ -294,7 +300,7 @@ namespace MinimalFirewall
                 string key = ConnectionKey(conn);
                 if (!_previousConnectionKeys.Contains(key))
                 {
-                    _flashingRows[key] = 200; // start flash at alpha 200
+                    _flashingRows[key] = FlashInitialAlpha;
                 }
             }
             _previousConnectionKeys.Clear();
