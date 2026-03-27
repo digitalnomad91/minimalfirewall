@@ -9,6 +9,7 @@ using MinimalFirewall.TypedObjects;
 using System.Collections.Specialized;
 using System;
 using System.Collections.Generic;
+using DarkModeForms;
 
 namespace MinimalFirewall
 {
@@ -19,6 +20,7 @@ namespace MinimalFirewall
         private IconService _iconService = null!;
         private BackgroundFirewallTaskService _backgroundTaskService = null!;
         private FirewallActionsService _actionsService = null!;
+        private DarkModeCS? _dm;
 
         private SortableBindingList<TcpConnectionViewModel> _sortableList = new();
         private readonly HashSet<TcpConnectionViewModel> _terminatedSet = new(ReferenceEqualityComparer.Instance);
@@ -49,11 +51,20 @@ namespace MinimalFirewall
         private readonly HashSet<string> _previousConnectionKeys = new();
 
         // Cached GDI+ objects 
-        private static readonly Brush HoverOverlayBrush = new SolidBrush(Color.FromArgb(25, Color.Black));
-        private static readonly Color EstablishedColor = Color.FromArgb(204, 255, 204);
-        private static readonly Color ListenColor = Color.FromArgb(255, 255, 204);
-        private static readonly Color TerminatedColor = Color.FromArgb(240, 240, 240);
-        private static readonly Color FlashColor = Color.FromArgb(180, 220, 255);
+        private static readonly Brush HoverOverlayBrushLight = new SolidBrush(Color.FromArgb(25, Color.Black));
+        private static readonly Brush HoverOverlayBrushDark = new SolidBrush(Color.FromArgb(30, Color.White));
+
+        // Light mode colors
+        private static readonly Color EstablishedColorLight = Color.FromArgb(204, 255, 204);
+        private static readonly Color ListenColorLight = Color.FromArgb(255, 255, 204);
+        private static readonly Color TerminatedColorLight = Color.FromArgb(240, 240, 240);
+        private static readonly Color FlashColorLight = Color.FromArgb(180, 220, 255);
+
+        // Dark mode colors
+        private static readonly Color EstablishedColorDark = Color.FromArgb(35, 60, 35);
+        private static readonly Color ListenColorDark = Color.FromArgb(60, 58, 30);
+        private static readonly Color TerminatedColorDark = Color.FromArgb(50, 50, 50);
+        private static readonly Color FlashColorDark = Color.FromArgb(30, 50, 80);
 
         private int _hoveredRowIndex = -1;
 
@@ -73,13 +84,15 @@ namespace MinimalFirewall
             AppSettings appSettings,
             IconService iconService,
             BackgroundFirewallTaskService backgroundTaskService,
-            FirewallActionsService actionsService)
+            FirewallActionsService actionsService,
+            DarkModeCS? dm = null)
         {
             _viewModel = viewModel;
             _appSettings = appSettings;
             _iconService = iconService;
             _backgroundTaskService = backgroundTaskService;
             _actionsService = actionsService;
+            _dm = dm;
 
             typeof(DataGridView).InvokeMember(
                "DoubleBuffered",
@@ -430,39 +443,69 @@ namespace MinimalFirewall
             if (e.RowIndex < 0 || e.RowIndex >= _sortableList.Count) return;
             var conn = _sortableList[e.RowIndex];
 
+            bool isDark = _dm != null && _dm.IsDarkMode;
             bool isTerminated = _keepTerminated && _terminatedSet.Contains(conn);
             string connKey = ConnectionKey(conn);
+
+            Color establishedBack = isDark ? EstablishedColorDark : EstablishedColorLight;
+            Color listenBack = isDark ? ListenColorDark : ListenColorLight;
+            Color terminatedBack = isDark ? TerminatedColorDark : TerminatedColorLight;
+            Color flashBase = isDark ? FlashColorDark : FlashColorLight;
+            Color textColor = isDark ? Color.FromArgb(240, 240, 240) : Color.Black;
+            Color terminatedText = isDark ? Color.FromArgb(130, 130, 130) : Color.Gray;
 
             // Flash effect for new/changed rows
             if (_flashingRows.TryGetValue(connKey, out int flashAlpha) && flashAlpha > 0)
             {
-                e.CellStyle.BackColor = Color.FromArgb(flashAlpha, FlashColor.R, FlashColor.G, FlashColor.B);
-                e.CellStyle.ForeColor = Color.Black;
+                e.CellStyle.BackColor = Color.FromArgb(flashAlpha, flashBase.R, flashBase.G, flashBase.B);
+                e.CellStyle.ForeColor = textColor;
             }
             else if (isTerminated)
             {
-                e.CellStyle.BackColor = TerminatedColor;
-                e.CellStyle.ForeColor = Color.Gray;
+                e.CellStyle.BackColor = terminatedBack;
+                e.CellStyle.ForeColor = terminatedText;
             }
             // Color code rows based on connection state
             else if (conn.State != null)
             {
                 if (conn.State.Equals("Established", StringComparison.OrdinalIgnoreCase))
                 {
-                    e.CellStyle.BackColor = EstablishedColor;
-                    e.CellStyle.ForeColor = Color.Black;
+                    e.CellStyle.BackColor = establishedBack;
+                    e.CellStyle.ForeColor = textColor;
                 }
                 else if (conn.State.Equals("Listen", StringComparison.OrdinalIgnoreCase))
                 {
-                    e.CellStyle.BackColor = ListenColor;
-                    e.CellStyle.ForeColor = Color.Black;
+                    e.CellStyle.BackColor = listenBack;
+                    e.CellStyle.ForeColor = textColor;
+                }
+                else
+                {
+                    // Other states (TimeWait, CloseWait, etc.)
+                    if (isDark)
+                    {
+                        e.CellStyle.BackColor = _dm!.OScolors.Surface;
+                        e.CellStyle.ForeColor = _dm.OScolors.TextActive;
+                    }
+                }
+            }
+            else
+            {
+                // No state — ensure dark mode defaults are applied
+                if (isDark)
+                {
+                    e.CellStyle.BackColor = _dm!.OScolors.Surface;
+                    e.CellStyle.ForeColor = _dm.OScolors.TextActive;
                 }
             }
 
             if (liveConnectionsDataGridView.Rows[e.RowIndex].Selected)
             {
-                e.CellStyle.SelectionBackColor = SystemColors.Highlight;
-                e.CellStyle.SelectionForeColor = SystemColors.HighlightText;
+                e.CellStyle.SelectionBackColor = isDark
+                    ? Color.FromArgb(50, 80, 120)
+                    : SystemColors.Highlight;
+                e.CellStyle.SelectionForeColor = isDark
+                    ? Color.White
+                    : SystemColors.HighlightText;
             }
             else
             {
@@ -521,7 +564,8 @@ namespace MinimalFirewall
         {
             if (!liveConnectionsDataGridView.Rows[e.RowIndex].Selected && e.RowIndex == _hoveredRowIndex)
             {
-                e.Graphics.FillRectangle(HoverOverlayBrush, e.RowBounds);
+                bool isDark = _dm != null && _dm.IsDarkMode;
+                e.Graphics.FillRectangle(isDark ? HoverOverlayBrushDark : HoverOverlayBrushLight, e.RowBounds);
             }
         }
 

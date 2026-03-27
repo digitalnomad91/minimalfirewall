@@ -162,7 +162,7 @@ namespace MinimalFirewall
             wildcardRulesControl1.Initialize(_wildcardRuleService, _backgroundTaskService, _appSettings);
             auditControl1.Initialize(_mainViewModel, _foreignRuleTracker, _firewallSentryService, _appSettings, dm);
             groupsControl1.Initialize(_groupManager, _backgroundTaskService, dm, _actionsService, _appSettings);
-            liveConnectionsControl1.Initialize(_mainViewModel.TrafficMonitorViewModel, _appSettings, _iconService, _backgroundTaskService, _actionsService);
+            liveConnectionsControl1.Initialize(_mainViewModel.TrafficMonitorViewModel, _appSettings, _iconService, _backgroundTaskService, _actionsService, dm);
             liveConnectionsControl1.RefreshCallback = async () => await RefreshLiveConnectionsQuietly();
 
             settingsControl1.Initialize(_appSettings, _startupService, _whitelistService, _actionsService, _activityLogger, _mainViewModel, appImageList, "Version " + Assembly.GetExecutingAssembly().GetName()?.Version?.ToString(3), dm);
