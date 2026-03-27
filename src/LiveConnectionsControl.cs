@@ -58,6 +58,8 @@ namespace MinimalFirewall
         private int _hoveredRowIndex = -1;
 
         // Callback for refresh — wired by MainForm
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        [Browsable(false)]
         public Func<Task>? RefreshCallback { get; set; }
 
         public LiveConnectionsControl()
