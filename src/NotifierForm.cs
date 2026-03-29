@@ -3,7 +3,6 @@ using System;
 using System.Drawing;
 using System.Windows.Forms;
 using System.IO;
-using System.Text.Json;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using System.ComponentModel;
@@ -22,8 +21,13 @@ namespace MinimalFirewall
         public bool TrustPublisher { get; private set; } = false;
         private readonly DarkModeCS dm;
 
-        // Settings file path for window position
-        private readonly string _layoutSettingsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "notifier_layout.json");
+        // Slide-in animation constants
+        private const int SlideAnimationIntervalMs = 12; // ~80fps for smooth animation
+        private const int SlideAnimationSteps = 20; // total steps (~240ms)
+        private const int TopMostDurationMs = 3000; // drop TopMost after this delay
+
+        private int _targetY;
+        private System.Windows.Forms.Timer? _slideTimer;
 
         public NotifierForm(PendingConnectionViewModel pending, bool isDarkMode)
         {
@@ -38,11 +42,17 @@ namespace MinimalFirewall
             };
             dm.ApplyTheme(isDarkMode);
 
-            if (isDarkMode)
-            {
-                pathLabel.BackColor = Color.FromArgb(45, 45, 48);
-                pathLabel.ForeColor = Color.White;
-            }
+            Color bgColor = isDarkMode ? Color.FromArgb(32, 32, 36) : Color.FromArgb(250, 250, 252);
+            Color fgColor = isDarkMode ? Color.White : Color.FromArgb(30, 30, 30);
+            Color panelBg = isDarkMode ? Color.FromArgb(40, 40, 45) : Color.FromArgb(243, 243, 246);
+
+            this.BackColor = bgColor;
+            this.ForeColor = fgColor;
+
+            pathLabel.BackColor = panelBg;
+            pathLabel.ForeColor = isDarkMode ? Color.FromArgb(180, 180, 180) : Color.FromArgb(80, 80, 80);
+            detailsRichTextBox.BackColor = panelBg;
+            detailsRichTextBox.ForeColor = fgColor;
 
             // Set UI Text
             string appName = string.IsNullOrEmpty(pending.ServiceName) ? pending.FileName : $"{pending.FileName} ({pending.ServiceName})";
@@ -51,84 +61,141 @@ namespace MinimalFirewall
             appNameLabel.Text = appName;
 
             pathLabel.Text = pending.AppPath;
-            pathLabel.WordWrap = false; 
+
+            PopulateDetails(pending, isDarkMode);
 
             this.AcceptButton = this.ignoreButton;
 
-            // Button Styling
-            Color allowColor = Color.FromArgb(204, 255, 204);
-            Color blockColor = Color.FromArgb(255, 204, 204);
-
-            allowButton.BackColor = allowColor;
-            blockButton.BackColor = blockColor;
-
-            allowButton.ForeColor = Color.Black;
-            blockButton.ForeColor = Color.Black;
-
-            allowButton.FlatAppearance.MouseOverBackColor = ControlPaint.Dark(allowColor, 0.1f);
-            blockButton.FlatAppearance.MouseOverBackColor = ControlPaint.Dark(blockColor, 0.1f);
-            allowButton.FlatAppearance.MouseDownBackColor = ControlPaint.Dark(allowColor, 0.2f);
-            blockButton.FlatAppearance.MouseDownBackColor = ControlPaint.Dark(blockColor, 0.2f);
+            // Modern button styling
+            StyleActionButton(allowButton, Color.FromArgb(46, 160, 67), Color.White);
+            StyleActionButton(blockButton, Color.FromArgb(218, 54, 51), Color.White);
+            StyleActionButton(ignoreButton, isDarkMode ? Color.FromArgb(55, 55, 60) : Color.FromArgb(220, 220, 225), fgColor);
+            StyleActionButton(tempAllowButton, isDarkMode ? Color.FromArgb(55, 55, 60) : Color.FromArgb(220, 220, 225), fgColor);
+            StyleActionButton(createWildcardButton, isDarkMode ? Color.FromArgb(55, 55, 60) : Color.FromArgb(220, 220, 225), fgColor);
 
             SetupTempAllowMenu();
         }
 
-        // Window Load: Restore position and ensure visibility
+        private static void StyleActionButton(Button btn, Color bgColor, Color fgColor)
+        {
+            btn.FlatStyle = FlatStyle.Flat;
+            btn.BackColor = bgColor;
+            btn.ForeColor = fgColor;
+            btn.FlatAppearance.BorderSize = 0;
+            btn.FlatAppearance.MouseOverBackColor = ControlPaint.Light(bgColor, 0.15f);
+            btn.FlatAppearance.MouseDownBackColor = ControlPaint.Dark(bgColor, 0.1f);
+            btn.Cursor = Cursors.Hand;
+            btn.Font = new Font("Segoe UI", 9F, FontStyle.Regular);
+        }
+
+        private void PopulateDetails(PendingConnectionViewModel pending, bool isDarkMode)
+        {
+            detailsRichTextBox.Clear();
+
+            Color labelColor = isDarkMode ? Color.FromArgb(100, 180, 255) : Color.FromArgb(0, 100, 200);
+            Color valColor = isDarkMode ? Color.White : Color.FromArgb(30, 30, 30);
+            using Font boldFont = new Font(detailsRichTextBox.Font, FontStyle.Bold);
+
+            void AppendField(string label, string value)
+            {
+                detailsRichTextBox.SelectionStart = detailsRichTextBox.TextLength;
+                detailsRichTextBox.SelectionLength = 0;
+                detailsRichTextBox.SelectionColor = labelColor;
+                detailsRichTextBox.SelectionFont = boldFont;
+                detailsRichTextBox.AppendText(label.PadRight(12));
+                detailsRichTextBox.SelectionColor = valColor;
+                detailsRichTextBox.SelectionFont = detailsRichTextBox.Font;
+                detailsRichTextBox.AppendText(value + Environment.NewLine);
+            }
+
+            // Direction with icon
+            string dirIcon = pending.Direction.Equals("Incoming", StringComparison.OrdinalIgnoreCase) ? "↓" : "↑";
+            AppendField("Direction", $"{dirIcon} {pending.Direction}");
+
+            // Remote address and port
+            string remote = "N/A";
+            if (!string.IsNullOrEmpty(pending.RemoteAddress))
+            {
+                remote = string.IsNullOrEmpty(pending.RemotePort)
+                    ? pending.RemoteAddress
+                    : $"{pending.RemoteAddress}:{pending.RemotePort}";
+            }
+            AppendField("Remote", remote);
+
+            // Protocol
+            string protoDisplay = pending.Protocol switch
+            {
+                "6" => "TCP",
+                "17" => "UDP",
+                "1" => "ICMPv4",
+                "58" => "ICMPv6",
+                _ => string.IsNullOrEmpty(pending.Protocol) ? "N/A" : $"Protocol {pending.Protocol}"
+            };
+            AppendField("Protocol", protoDisplay);
+        }
+
+        // Position in bottom-right above taskbar with slide-up animation
         protected override void OnLoad(EventArgs e)
         {
             base.OnLoad(e);
 
-            // Ensure the notification is seen over other apps
+            // Don't be permanently topmost — just bring to front initially
             this.TopMost = true;
             this.Activate();
 
-            try
+            // Position in bottom-right corner above taskbar
+            var workingArea = Screen.PrimaryScreen?.WorkingArea ?? Screen.AllScreens[0].WorkingArea;
+            int margin = 12;
+            int startX = workingArea.Right - this.Width - margin;
+            int startY = workingArea.Bottom; // start below the screen
+            _targetY = workingArea.Bottom - this.Height - margin;
+
+            this.StartPosition = FormStartPosition.Manual;
+            this.Location = new Point(startX, startY);
+            this.Opacity = 0;
+
+            // Slide-up animation
+            _slideTimer = new System.Windows.Forms.Timer { Interval = SlideAnimationIntervalMs };
+            int step = 0;
+            _slideTimer.Tick += (s, ev) =>
             {
-                if (File.Exists(_layoutSettingsPath))
+                step++;
+                double t = Math.Min(step / (double)SlideAnimationSteps, 1.0);
+                double ease = 1.0 - Math.Pow(1.0 - t, 3);
+
+                this.Top = startY - (int)((startY - _targetY) * ease);
+                this.Opacity = ease;
+
+                if (t >= 1.0)
                 {
-                    string json = File.ReadAllText(_layoutSettingsPath);
-                    var settings = JsonSerializer.Deserialize<NotifierLayoutSettings>(json);
-
-                    if (settings != null)
-                    {
-                        // Restore Size
-                        if (settings.Width >= this.MinimumSize.Width && settings.Height >= this.MinimumSize.Height)
-                        {
-                            this.Size = new Size(settings.Width, settings.Height);
-                        }
-
-                        // Restore Location only if visible on current screens
-                        Point savedLoc = new Point(settings.X, settings.Y);
-                        Rectangle targetRect = new Rectangle(savedLoc, this.Size);
-                        bool isVisible = false;
-
-                        // Check intersection to ensure window isn't lost off-screen
-                        foreach (Screen screen in Screen.AllScreens)
-                        {
-                            if (screen.WorkingArea.IntersectsWith(targetRect))
-                            {
-                                isVisible = true;
-                                break;
-                            }
-                        }
-
-                        if (isVisible)
-                        {
-                            this.StartPosition = FormStartPosition.Manual;
-                            this.Location = savedLoc;
-                        }
-                    }
+                    _slideTimer.Stop();
+                    _slideTimer.Dispose();
+                    _slideTimer = null;
+                    this.Top = _targetY;
+                    this.Opacity = 1.0;
                 }
-            }
-            catch (Exception)
+            };
+            _slideTimer.Start();
+
+            // Drop TopMost after a brief delay so it doesn't stay pinned forever
+            var topMostTimer = new System.Windows.Forms.Timer { Interval = TopMostDurationMs };
+            topMostTimer.Tick += (s, ev) =>
             {
-            }
+                this.TopMost = false;
+                topMostTimer.Stop();
+                topMostTimer.Dispose();
+            };
+            topMostTimer.Start();
         }
 
-        protected override async void OnShown(EventArgs e)
+        protected override void OnShown(EventArgs e)
         {
             base.OnShown(e);
+            LoadPublisherInfoAsync();
+        }
 
+        private async void LoadPublisherInfoAsync()
+        {
             try
             {
                 string publisherName = null;
@@ -155,29 +222,11 @@ namespace MinimalFirewall
             }
         }
 
-        // Window Closing: Save position
+        // Window Closing: no longer save position (toast always appears bottom-right)
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
-            try
-            {
-                if (this.WindowState == FormWindowState.Normal)
-                {
-                    var settings = new NotifierLayoutSettings
-                    {
-                        X = this.Location.X,
-                        Y = this.Location.Y,
-                        Width = this.Size.Width,
-                        Height = this.Size.Height
-                    };
-
-                    string json = JsonSerializer.Serialize(settings);
-                    File.WriteAllText(_layoutSettingsPath, json);
-                }
-            }
-            catch
-            {
-            }
-
+            _slideTimer?.Stop();
+            _slideTimer?.Dispose();
             base.OnFormClosing(e);
         }
 
@@ -281,14 +330,6 @@ namespace MinimalFirewall
             catch
             {
             }
-        }
-
-        public class NotifierLayoutSettings
-        {
-            public int X { get; set; }
-            public int Y { get; set; }
-            public int Width { get; set; }
-            public int Height { get; set; }
         }
     }
 }

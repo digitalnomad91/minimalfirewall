@@ -212,6 +212,8 @@ namespace MinimalFirewall
                p => _actionsService.SetGroupEnabledState(p.GroupName, p.IsEnabled), TaskResult.CacheOnly);
             map[FirewallTaskType.DeleteGroup] = new AsyncActionHandler<string>(
                 async p => await _actionsService.DeleteGroupAsync(p), TaskResult.CacheOnly);
+            map[FirewallTaskType.RenameGroup] = new AsyncActionHandler<RenameGroupPayload>(
+                async p => await _actionsService.RenameGroupAsync(p.OldGroupName, p.NewGroupName), TaskResult.CacheOnly);
             map[FirewallTaskType.AcceptForeignRule] = new ActionHandler<ForeignRuleChangePayload>(
                 p => _actionsService.AcceptForeignRule(p.Change), TaskResult.None);
             map[FirewallTaskType.AcceptAllForeignRules] = new ActionHandler<AllForeignRuleChangesPayload>(

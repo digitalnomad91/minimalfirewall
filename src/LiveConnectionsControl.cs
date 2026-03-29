@@ -9,6 +9,7 @@ using MinimalFirewall.TypedObjects;
 using System.Collections.Specialized;
 using System;
 using System.Collections.Generic;
+using DarkModeForms;
 
 namespace MinimalFirewall
 {
@@ -19,15 +20,58 @@ namespace MinimalFirewall
         private IconService _iconService = null!;
         private BackgroundFirewallTaskService _backgroundTaskService = null!;
         private FirewallActionsService _actionsService = null!;
+        private DarkModeCS? _dm;
 
         private SortableBindingList<TcpConnectionViewModel> _sortableList = new();
+        private readonly HashSet<TcpConnectionViewModel> _terminatedSet = new(ReferenceEqualityComparer.Instance);
+        private bool _keepTerminated = false;
+
+        // Auto-refresh timer
+        private System.Windows.Forms.Timer? _autoRefreshTimer;
+        private bool _isAutoRefreshing = true;
+        private bool _isRefreshing = false;
+        private const int AutoRefreshIntervalMs = 3000;
+
+        // Animation constants
+        private const int SpinnerAnimationIntervalMs = 150;
+        private const int FlashInitialAlpha = 200;
+        private const int FlashDecayRate = 15; // alpha per 100ms tick
+        private const int FlashDecayIntervalMs = 100;
+
+        // Spinner animation
+        private System.Windows.Forms.Timer? _spinnerTimer;
+        private int _spinnerFrame = 0;
+        private static readonly string[] SpinnerFrames = { "◐", "◓", "◑", "◒" };
+
+        // Row flash tracking
+        private readonly Dictionary<string, int> _flashingRows = new();
+        private System.Windows.Forms.Timer? _flashDecayTimer;
+
+        // Previous snapshot for change detection
+        private readonly HashSet<string> _previousConnectionKeys = new();
 
         // Cached GDI+ objects 
-        private static readonly Brush HoverOverlayBrush = new SolidBrush(Color.FromArgb(25, Color.Black));
-        private static readonly Color EstablishedColor = Color.FromArgb(204, 255, 204);
-        private static readonly Color ListenColor = Color.FromArgb(255, 255, 204);
+        private static readonly Brush HoverOverlayBrushLight = new SolidBrush(Color.FromArgb(25, Color.Black));
+        private static readonly Brush HoverOverlayBrushDark = new SolidBrush(Color.FromArgb(30, Color.White));
+
+        // Light mode colors
+        private static readonly Color EstablishedColorLight = Color.FromArgb(204, 255, 204);
+        private static readonly Color ListenColorLight = Color.FromArgb(255, 255, 204);
+        private static readonly Color TerminatedColorLight = Color.FromArgb(240, 240, 240);
+        private static readonly Color FlashColorLight = Color.FromArgb(180, 220, 255);
+
+        // Dark mode colors
+        private static readonly Color EstablishedColorDark = Color.FromArgb(35, 60, 35);
+        private static readonly Color ListenColorDark = Color.FromArgb(60, 58, 30);
+        private static readonly Color TerminatedColorDark = Color.FromArgb(50, 50, 50);
+        private static readonly Color FlashColorDark = Color.FromArgb(30, 50, 80);
 
         private int _hoveredRowIndex = -1;
+
+        // Callback for refresh — wired by MainForm
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        [Browsable(false)]
+        public Func<Task>? RefreshCallback { get; set; }
 
         public LiveConnectionsControl()
         {
@@ -40,13 +84,15 @@ namespace MinimalFirewall
             AppSettings appSettings,
             IconService iconService,
             BackgroundFirewallTaskService backgroundTaskService,
-            FirewallActionsService actionsService)
+            FirewallActionsService actionsService,
+            DarkModeCS? dm = null)
         {
             _viewModel = viewModel;
             _appSettings = appSettings;
             _iconService = iconService;
             _backgroundTaskService = backgroundTaskService;
             _actionsService = actionsService;
+            _dm = dm;
 
             typeof(DataGridView).InvokeMember(
                "DoubleBuffered",
@@ -64,8 +110,128 @@ namespace MinimalFirewall
 
             _viewModel.PropertyChanged += ViewModel_PropertyChanged;
 
+            // Flash decay timer — reduces flash alpha by FlashDecayRate every FlashDecayIntervalMs
+            _flashDecayTimer = new System.Windows.Forms.Timer { Interval = FlashDecayIntervalMs };
+            _flashDecayTimer.Tick += FlashDecayTimer_Tick;
+            _flashDecayTimer.Start();
+
             UpdateEnabledState();
             UpdateLiveConnectionsView();
+        }
+
+        // --- Auto-Refresh ---
+
+        public void StartAutoRefresh()
+        {
+            if (_autoRefreshTimer != null) return;
+            _autoRefreshTimer = new System.Windows.Forms.Timer { Interval = AutoRefreshIntervalMs };
+            _autoRefreshTimer.Tick += AutoRefreshTimer_Tick;
+            _autoRefreshTimer.Start();
+            UpdateRefreshButtonState();
+        }
+
+        public void StopAutoRefresh()
+        {
+            _autoRefreshTimer?.Stop();
+            _autoRefreshTimer?.Dispose();
+            _autoRefreshTimer = null;
+            HideSpinner();
+            UpdateRefreshButtonState();
+        }
+
+        private async void AutoRefreshTimer_Tick(object? sender, EventArgs e)
+        {
+            if (_isRefreshing || RefreshCallback == null) return;
+            await DoRefreshAsync();
+        }
+
+        private async void refreshButton_Click(object sender, EventArgs e)
+        {
+            if (_isRefreshing || RefreshCallback == null) return;
+            await DoRefreshAsync();
+        }
+
+        private async Task DoRefreshAsync()
+        {
+            if (_isRefreshing) return;
+            _isRefreshing = true;
+            ShowSpinner();
+
+            try
+            {
+                if (RefreshCallback != null)
+                    await RefreshCallback.Invoke();
+            }
+            catch (Exception)
+            {
+                // Ignore refresh errors
+            }
+            finally
+            {
+                _isRefreshing = false;
+                HideSpinner();
+            }
+        }
+
+        private void autoRefreshCheckBox_CheckedChanged(object sender, EventArgs e)
+        {
+            _isAutoRefreshing = autoRefreshCheckBox.Checked;
+            if (_isAutoRefreshing)
+                StartAutoRefresh();
+            else
+                StopAutoRefresh();
+        }
+
+        private void UpdateRefreshButtonState()
+        {
+            refreshButton.Enabled = !_isAutoRefreshing || !_isRefreshing;
+        }
+
+        private void ShowSpinner()
+        {
+            spinnerLabel.Visible = true;
+            _spinnerFrame = 0;
+            if (_spinnerTimer == null)
+            {
+                _spinnerTimer = new System.Windows.Forms.Timer { Interval = SpinnerAnimationIntervalMs };
+                _spinnerTimer.Tick += (s, e) =>
+                {
+                    _spinnerFrame = (_spinnerFrame + 1) % SpinnerFrames.Length;
+                    spinnerLabel.Text = SpinnerFrames[_spinnerFrame];
+                };
+            }
+            _spinnerTimer.Start();
+        }
+
+        private void HideSpinner()
+        {
+            _spinnerTimer?.Stop();
+            spinnerLabel.Visible = false;
+            spinnerLabel.Text = "";
+        }
+
+        // --- Flash Decay ---
+
+        private void FlashDecayTimer_Tick(object? sender, EventArgs e)
+        {
+            if (_flashingRows.Count == 0) return;
+
+            var keysToRemove = new List<string>();
+            var keysToDecay = new List<string>(_flashingRows.Keys);
+
+            foreach (var key in keysToDecay)
+            {
+                int alpha = _flashingRows[key] - FlashDecayRate;
+                if (alpha <= 0)
+                    keysToRemove.Add(key);
+                else
+                    _flashingRows[key] = alpha;
+            }
+
+            foreach (var key in keysToRemove)
+                _flashingRows.Remove(key);
+
+            liveConnectionsDataGridView.Invalidate();
         }
 
         private void UnsubscribeEvents()
@@ -79,14 +245,28 @@ namespace MinimalFirewall
         protected override void OnHandleDestroyed(EventArgs e)
         {
             UnsubscribeEvents();
+            StopAutoRefresh();
+            _flashDecayTimer?.Stop();
+            _flashDecayTimer?.Dispose();
+            _spinnerTimer?.Stop();
+            _spinnerTimer?.Dispose();
             base.OnHandleDestroyed(e);
         }
 
         public void OnTabDeselected()
         {
             UnsubscribeEvents();
+            StopAutoRefresh();
             if (_viewModel != null) _viewModel.StopMonitoring();
             UpdateEnabledState();
+        }
+
+        public void OnTabSelected()
+        {
+            if (_isAutoRefreshing && _appSettings?.IsTrafficMonitorEnabled == true)
+            {
+                StartAutoRefresh();
+            }
         }
 
         private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -109,6 +289,7 @@ namespace MinimalFirewall
             if (_appSettings == null) return;
             bool isEnabled = _appSettings.IsTrafficMonitorEnabled;
             liveConnectionsDataGridView.Visible = isEnabled;
+            topToolbarPanel.Visible = isEnabled;
             disabledPanel.Visible = !isEnabled;
         }
 
@@ -116,13 +297,59 @@ namespace MinimalFirewall
         {
             if (_viewModel == null) return;
 
+            // Update last-refreshed indicator
+            lastRefreshedLabel.Text = $"Last updated: {DateTime.Now:HH:mm:ss}";
+
             string? selectedIdentifier = null;
             if (TryGetSelectedConnection(out var currentConn) && currentConn != null)
             {
                 selectedIdentifier = currentConn.ProcessPath + currentConn.RemotePort;
             }
 
-            var newList = _viewModel.ActiveConnections.ToList();
+            var newActiveList = _viewModel.ActiveConnections.ToList();
+
+            // Detect new connections for flash effect
+            var currentKeys = new HashSet<string>(newActiveList.Select(ConnectionKey));
+            foreach (var conn in newActiveList)
+            {
+                string key = ConnectionKey(conn);
+                if (!_previousConnectionKeys.Contains(key))
+                {
+                    _flashingRows[key] = FlashInitialAlpha;
+                }
+            }
+            _previousConnectionKeys.Clear();
+            foreach (var key in currentKeys)
+                _previousConnectionKeys.Add(key);
+
+            List<TcpConnectionViewModel> displayList;
+
+            if (_keepTerminated)
+            {
+                // Build a lookup set of currently active connections by composite key
+                var activeKeys = new HashSet<string>(newActiveList.Select(ConnectionKey));
+
+                // Find connections that just disappeared (terminated)
+                foreach (var prev in _sortableList)
+                {
+                    if (!activeKeys.Contains(ConnectionKey(prev)))
+                    {
+                        _terminatedSet.Add(prev);
+                    }
+                }
+
+                // Remove any that have reappeared
+                _terminatedSet.RemoveWhere(t => activeKeys.Contains(ConnectionKey(t)));
+
+                // Build display list: active + terminated
+                displayList = new List<TcpConnectionViewModel>(newActiveList);
+                displayList.AddRange(_terminatedSet);
+            }
+            else
+            {
+                _terminatedSet.Clear();
+                displayList = newActiveList;
+            }
 
             // apply sorting
             if (_appSettings != null)
@@ -135,24 +362,24 @@ namespace MinimalFirewall
                     var col = liveConnectionsDataGridView.Columns[sortCol];
                     if (!string.IsNullOrEmpty(col.DataPropertyName))
                     {
-                        _sortableList = new SortableBindingList<TcpConnectionViewModel>(newList);
+                        _sortableList = new SortableBindingList<TcpConnectionViewModel>(displayList);
                         var dir = sortOrd == (int)SortOrder.Ascending ? ListSortDirection.Ascending : ListSortDirection.Descending;
                         _sortableList.Sort(col.DataPropertyName, dir);
                         col.HeaderCell.SortGlyphDirection = (SortOrder)sortOrd;
                     }
                     else
                     {
-                        _sortableList = new SortableBindingList<TcpConnectionViewModel>(newList);
+                        _sortableList = new SortableBindingList<TcpConnectionViewModel>(displayList);
                     }
                 }
                 else
                 {
-                    _sortableList = new SortableBindingList<TcpConnectionViewModel>(newList);
+                    _sortableList = new SortableBindingList<TcpConnectionViewModel>(displayList);
                 }
             }
             else
             {
-                _sortableList = new SortableBindingList<TcpConnectionViewModel>(newList);
+                _sortableList = new SortableBindingList<TcpConnectionViewModel>(displayList);
             }
 
             liveConnectionsDataGridView.RowCount = _sortableList.Count;
@@ -216,25 +443,69 @@ namespace MinimalFirewall
             if (e.RowIndex < 0 || e.RowIndex >= _sortableList.Count) return;
             var conn = _sortableList[e.RowIndex];
 
+            bool isDark = _dm != null && _dm.IsDarkMode;
+            bool isTerminated = _keepTerminated && _terminatedSet.Contains(conn);
+            string connKey = ConnectionKey(conn);
+
+            Color establishedBack = isDark ? EstablishedColorDark : EstablishedColorLight;
+            Color listenBack = isDark ? ListenColorDark : ListenColorLight;
+            Color terminatedBack = isDark ? TerminatedColorDark : TerminatedColorLight;
+            Color flashBase = isDark ? FlashColorDark : FlashColorLight;
+            Color textColor = isDark ? Color.FromArgb(240, 240, 240) : Color.Black;
+            Color terminatedText = isDark ? Color.FromArgb(130, 130, 130) : Color.Gray;
+
+            // Flash effect for new/changed rows
+            if (_flashingRows.TryGetValue(connKey, out int flashAlpha) && flashAlpha > 0)
+            {
+                e.CellStyle.BackColor = Color.FromArgb(flashAlpha, flashBase.R, flashBase.G, flashBase.B);
+                e.CellStyle.ForeColor = textColor;
+            }
+            else if (isTerminated)
+            {
+                e.CellStyle.BackColor = terminatedBack;
+                e.CellStyle.ForeColor = terminatedText;
+            }
             // Color code rows based on connection state
-            if (conn.State != null)
+            else if (conn.State != null)
             {
                 if (conn.State.Equals("Established", StringComparison.OrdinalIgnoreCase))
                 {
-                    e.CellStyle.BackColor = EstablishedColor;
-                    e.CellStyle.ForeColor = Color.Black;
+                    e.CellStyle.BackColor = establishedBack;
+                    e.CellStyle.ForeColor = textColor;
                 }
                 else if (conn.State.Equals("Listen", StringComparison.OrdinalIgnoreCase))
                 {
-                    e.CellStyle.BackColor = ListenColor;
-                    e.CellStyle.ForeColor = Color.Black;
+                    e.CellStyle.BackColor = listenBack;
+                    e.CellStyle.ForeColor = textColor;
+                }
+                else
+                {
+                    // Other states (TimeWait, CloseWait, etc.)
+                    if (isDark)
+                    {
+                        e.CellStyle.BackColor = _dm!.OScolors.Surface;
+                        e.CellStyle.ForeColor = _dm.OScolors.TextActive;
+                    }
+                }
+            }
+            else
+            {
+                // No state — ensure dark mode defaults are applied
+                if (isDark)
+                {
+                    e.CellStyle.BackColor = _dm!.OScolors.Surface;
+                    e.CellStyle.ForeColor = _dm.OScolors.TextActive;
                 }
             }
 
             if (liveConnectionsDataGridView.Rows[e.RowIndex].Selected)
             {
-                e.CellStyle.SelectionBackColor = SystemColors.Highlight;
-                e.CellStyle.SelectionForeColor = SystemColors.HighlightText;
+                e.CellStyle.SelectionBackColor = isDark
+                    ? Color.FromArgb(50, 80, 120)
+                    : SystemColors.Highlight;
+                e.CellStyle.SelectionForeColor = isDark
+                    ? Color.White
+                    : SystemColors.HighlightText;
             }
             else
             {
@@ -242,6 +513,19 @@ namespace MinimalFirewall
                 e.CellStyle.SelectionForeColor = e.CellStyle.ForeColor;
             }
         }
+
+        private void keepTerminatedCheckBox_CheckedChanged(object sender, EventArgs e)
+        {
+            _keepTerminated = keepTerminatedCheckBox.Checked;
+            if (!_keepTerminated)
+            {
+                _terminatedSet.Clear();
+                UpdateLiveConnectionsView();
+            }
+        }
+
+        private static string ConnectionKey(TcpConnectionViewModel c)
+            => $"{c.ProcessPath}|{c.LocalPort}|{c.RemotePort}|{c.RemoteAddress}";
 
         // --- Mouse & Selection Handling ---
 
@@ -280,7 +564,8 @@ namespace MinimalFirewall
         {
             if (!liveConnectionsDataGridView.Rows[e.RowIndex].Selected && e.RowIndex == _hoveredRowIndex)
             {
-                e.Graphics.FillRectangle(HoverOverlayBrush, e.RowBounds);
+                bool isDark = _dm != null && _dm.IsDarkMode;
+                e.Graphics.FillRectangle(isDark ? HoverOverlayBrushDark : HoverOverlayBrushLight, e.RowBounds);
             }
         }
 

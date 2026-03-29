@@ -8,7 +8,8 @@ namespace MinimalFirewall
         private System.ComponentModel.IContainer components = null;
         private System.Windows.Forms.Label infoLabel;
         private System.Windows.Forms.Label appNameLabel;
-        private System.Windows.Forms.TextBox pathLabel;
+        private System.Windows.Forms.Label pathLabel;
+        private System.Windows.Forms.RichTextBox detailsRichTextBox;
         private System.Windows.Forms.CheckBox trustPublisherCheckBox;
         private System.Windows.Forms.Button createWildcardButton;
         private System.Windows.Forms.Button copyDetailsButton;
@@ -34,7 +35,8 @@ namespace MinimalFirewall
             components = new System.ComponentModel.Container();
             infoLabel = new Label();
             appNameLabel = new Label();
-            pathLabel = new TextBox();
+            pathLabel = new Label();
+            detailsRichTextBox = new RichTextBox();
             trustPublisherCheckBox = new CheckBox();
             createWildcardButton = new Button();
             copyDetailsButton = new Button();
@@ -48,7 +50,8 @@ namespace MinimalFirewall
             // infoLabel
             // 
             infoLabel.AutoSize = true;
-            infoLabel.Location = new Point(14, 10);
+            infoLabel.Font = new Font("Segoe UI", 8.5F);
+            infoLabel.Location = new Point(16, 12);
             infoLabel.Margin = new Padding(4, 0, 4, 0);
             infoLabel.Name = "infoLabel";
             infoLabel.Size = new Size(142, 15);
@@ -58,35 +61,49 @@ namespace MinimalFirewall
             // appNameLabel
             // 
             appNameLabel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            appNameLabel.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
-            appNameLabel.Location = new Point(4, 30);
+            appNameLabel.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
+            appNameLabel.Location = new Point(16, 30);
             appNameLabel.Margin = new Padding(4, 0, 4, 0);
             appNameLabel.Name = "appNameLabel";
-            appNameLabel.Size = new Size(330, 27);
+            appNameLabel.Size = new Size(348, 24);
             appNameLabel.TabIndex = 1;
             appNameLabel.Text = "Application Name";
             // 
-            // pathLabel
+            // pathLabel — now a Label, not a TextBox
             // 
-            pathLabel.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            pathLabel.BackColor = SystemColors.Control;
-            pathLabel.BorderStyle = BorderStyle.None;
-            pathLabel.Font = new Font("Segoe UI", 8F);
-            pathLabel.Location = new Point(4, 60);
-            pathLabel.Margin = new Padding(4, 3, 4, 3);
-            pathLabel.Multiline = true;
+            pathLabel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            pathLabel.AutoEllipsis = true;
+            pathLabel.Font = new Font("Segoe UI", 7.5F);
+            pathLabel.Location = new Point(16, 56);
+            pathLabel.Margin = new Padding(4, 0, 4, 0);
             pathLabel.Name = "pathLabel";
-            pathLabel.ReadOnly = true;
-            pathLabel.ScrollBars = ScrollBars.Vertical;
-            pathLabel.Size = new Size(330, 54);
+            pathLabel.Padding = new Padding(6, 4, 6, 4);
+            pathLabel.Size = new Size(348, 24);
             pathLabel.TabIndex = 2;
             pathLabel.Text = "C:\\Path\\To\\Application.exe";
+            // 
+            // detailsRichTextBox
+            // 
+            detailsRichTextBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            detailsRichTextBox.BackColor = SystemColors.Control;
+            detailsRichTextBox.BorderStyle = BorderStyle.None;
+            detailsRichTextBox.Font = new Font("Consolas", 8.5F);
+            detailsRichTextBox.Location = new Point(16, 86);
+            detailsRichTextBox.Margin = new Padding(4, 3, 4, 3);
+            detailsRichTextBox.Name = "detailsRichTextBox";
+            detailsRichTextBox.ReadOnly = true;
+            detailsRichTextBox.ScrollBars = RichTextBoxScrollBars.None;
+            detailsRichTextBox.Size = new Size(348, 58);
+            detailsRichTextBox.TabIndex = 10;
+            detailsRichTextBox.TabStop = false;
+            detailsRichTextBox.Text = "";
             // 
             // trustPublisherCheckBox
             // 
             trustPublisherCheckBox.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             trustPublisherCheckBox.AutoSize = true;
-            trustPublisherCheckBox.Location = new Point(72, 128);
+            trustPublisherCheckBox.Font = new Font("Segoe UI", 8F);
+            trustPublisherCheckBox.Location = new Point(56, 153);
             trustPublisherCheckBox.Margin = new Padding(4, 3, 4, 3);
             trustPublisherCheckBox.Name = "trustPublisherCheckBox";
             trustPublisherCheckBox.Size = new Size(142, 19);
@@ -98,22 +115,22 @@ namespace MinimalFirewall
             // createWildcardButton
             // 
             createWildcardButton.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
-            createWildcardButton.Location = new Point(4, 208);
+            createWildcardButton.Location = new Point(16, 230);
             createWildcardButton.Margin = new Padding(4, 3, 4, 3);
             createWildcardButton.Name = "createWildcardButton";
-            createWildcardButton.Size = new Size(152, 32);
+            createWildcardButton.Size = new Size(152, 30);
             createWildcardButton.TabIndex = 4;
-            createWildcardButton.Text = "Create Wildcard Rule...";
+            createWildcardButton.Text = "Create Wildcard Rule…";
             createWildcardButton.UseVisualStyleBackColor = true;
             createWildcardButton.Click += createWildcardButton_Click;
             // 
             // copyDetailsButton
             // 
             copyDetailsButton.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
-            copyDetailsButton.Location = new Point(18, 120);
+            copyDetailsButton.Location = new Point(16, 149);
             copyDetailsButton.Margin = new Padding(4, 3, 4, 3);
             copyDetailsButton.Name = "copyDetailsButton";
-            copyDetailsButton.Size = new Size(46, 32);
+            copyDetailsButton.Size = new Size(34, 28);
             copyDetailsButton.TabIndex = 5;
             copyDetailsButton.Text = "📋";
             copyDetailsButton.UseVisualStyleBackColor = true;
@@ -123,24 +140,24 @@ namespace MinimalFirewall
             // 
             allowButton.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             allowButton.FlatStyle = FlatStyle.Flat;
-            allowButton.Location = new Point(4, 158);
+            allowButton.Location = new Point(16, 188);
             allowButton.Margin = new Padding(4, 3, 4, 3);
             allowButton.Name = "allowButton";
-            allowButton.Size = new Size(98, 35);
+            allowButton.Size = new Size(100, 32);
             allowButton.TabIndex = 6;
-            allowButton.Text = "Allow";
+            allowButton.Text = "✓ Allow";
             allowButton.UseVisualStyleBackColor = true;
             allowButton.Click += allowButton_Click;
             // 
             // tempAllowButton
             // 
             tempAllowButton.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            tempAllowButton.Location = new Point(169, 208);
+            tempAllowButton.Location = new Point(200, 230);
             tempAllowButton.Margin = new Padding(4, 3, 4, 3);
             tempAllowButton.Name = "tempAllowButton";
-            tempAllowButton.Size = new Size(165, 35);
+            tempAllowButton.Size = new Size(164, 30);
             tempAllowButton.TabIndex = 7;
-            tempAllowButton.Text = "Allow Temporarily ▼";
+            tempAllowButton.Text = "Allow Temporarily ▾";
             tempAllowButton.UseVisualStyleBackColor = true;
             tempAllowButton.Click += tempAllowButton_Click;
             // 
@@ -148,22 +165,22 @@ namespace MinimalFirewall
             // 
             blockButton.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             blockButton.FlatStyle = FlatStyle.Flat;
-            blockButton.Location = new Point(107, 158);
+            blockButton.Location = new Point(122, 188);
             blockButton.Margin = new Padding(4, 3, 4, 3);
             blockButton.Name = "blockButton";
-            blockButton.Size = new Size(98, 35);
+            blockButton.Size = new Size(100, 32);
             blockButton.TabIndex = 8;
-            blockButton.Text = "Block";
+            blockButton.Text = "✕ Block";
             blockButton.UseVisualStyleBackColor = true;
             blockButton.Click += blockButton_Click;
             // 
             // ignoreButton
             // 
             ignoreButton.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            ignoreButton.Location = new Point(226, 158);
+            ignoreButton.Location = new Point(264, 188);
             ignoreButton.Margin = new Padding(4, 3, 4, 3);
             ignoreButton.Name = "ignoreButton";
-            ignoreButton.Size = new Size(98, 35);
+            ignoreButton.Size = new Size(100, 32);
             ignoreButton.TabIndex = 9;
             ignoreButton.Text = "Ignore";
             ignoreButton.UseVisualStyleBackColor = true;
@@ -178,7 +195,7 @@ namespace MinimalFirewall
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(365, 255);
+            ClientSize = new Size(380, 275);
             Controls.Add(ignoreButton);
             Controls.Add(blockButton);
             Controls.Add(tempAllowButton);
@@ -186,16 +203,18 @@ namespace MinimalFirewall
             Controls.Add(copyDetailsButton);
             Controls.Add(createWildcardButton);
             Controls.Add(trustPublisherCheckBox);
+            Controls.Add(detailsRichTextBox);
             Controls.Add(pathLabel);
             Controls.Add(appNameLabel);
             Controls.Add(infoLabel);
+            FormBorderStyle = FormBorderStyle.FixedToolWindow;
             Margin = new Padding(4, 3, 4, 3);
             MaximizeBox = false;
             MinimizeBox = false;
-            MinimumSize = new Size(365, 255);
+            MinimumSize = new Size(380, 275);
             Name = "NotifierForm";
             ShowInTaskbar = false;
-            StartPosition = FormStartPosition.CenterScreen;
+            StartPosition = FormStartPosition.Manual;
             Text = "Connection Blocked";
             ResumeLayout(false);
             PerformLayout();

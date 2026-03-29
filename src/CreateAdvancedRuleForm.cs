@@ -74,6 +74,15 @@ namespace MinimalFirewall
             else bothDirRadioButton.Checked = true;
         }
 
+        public CreateAdvancedRuleForm(FirewallActionsService actionsService, AppSettings appSettings, string groupName)
+            : this(actionsService, appSettings)
+        {
+            if (!string.IsNullOrWhiteSpace(groupName))
+            {
+                groupComboBox.Text = groupName;
+            }
+        }
+
         public CreateAdvancedRuleForm(FirewallActionsService actionsService, AdvancedRuleViewModel ruleToEdit, AppSettings appSettings)
             : this(actionsService, appSettings)
         {

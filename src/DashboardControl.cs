@@ -124,7 +124,15 @@ namespace MinimalFirewall
             AppendLine("Direction", pending.Direction);
             string remote = string.IsNullOrEmpty(pending.RemoteAddress) ? "N/A" : $"{pending.RemoteAddress}:{pending.RemotePort}";
             AppendLine("Remote Address", remote);
-            AppendLine("Protocol", pending.Protocol);
+            string protoDisplay = pending.Protocol switch
+            {
+                "6" => "TCP",
+                "17" => "UDP",
+                "1" => "ICMPv4",
+                "58" => "ICMPv6",
+                _ => string.IsNullOrEmpty(pending.Protocol) ? "N/A" : $"Protocol {pending.Protocol}"
+            };
+            AppendLine("Protocol", protoDisplay);
 
             if (!string.IsNullOrEmpty(pending.CommandLine))
             {

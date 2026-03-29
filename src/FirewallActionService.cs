@@ -1093,6 +1093,23 @@ namespace MinimalFirewall
             });
         }
 
+        public async Task RenameGroupAsync(string oldGroupName, string newGroupName)
+        {
+            await Task.Run(() =>
+            {
+                try
+                {
+                    activityLogger.LogDebug($"Renaming group from '{oldGroupName}' to '{newGroupName}'");
+                    firewallService.RenameGroup(oldGroupName, newGroupName);
+                    activityLogger.LogChange("Rename Group", $"Group renamed from '{oldGroupName}' to '{newGroupName}'.");
+                }
+                catch (COMException ex)
+                {
+                    activityLogger.LogException($"RenameGroupAsync from {oldGroupName} to {newGroupName}", ex);
+                }
+            });
+        }
+
         public void DeleteAllMfwRules()
         {
             try
