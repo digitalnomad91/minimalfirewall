@@ -1,0 +1,139 @@
+<Page
+    x:Class="MinimalFirewall.Pages.DashboardPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:MinimalFirewall"
+    xmlns:toolkit="using:CommunityToolkit.WinUI.UI.Controls"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+    <Grid Padding="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Grid Grid.Row="0" Margin="0,0,0,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Text="Dashboard — Pending Connections"
+                       Style="{StaticResource SubtitleTextBlockStyle}"
+                       VerticalAlignment="Center" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                <Button x:Name="AllowAllButton" Content="Allow All" Click="AllowAllButton_Click" />
+                <Button x:Name="BlockAllButton" Content="Block All"
+                        Style="{StaticResource AccentButtonStyle}"
+                        Click="BlockAllButton_Click" />
+            </StackPanel>
+        </Grid>
+
+        <!-- Landing view when not locked down -->
+        <Grid x:Name="LandingGrid" Grid.Row="1" Visibility="Visible">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
+                <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE785;"
+                          FontSize="64" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                <TextBlock Text="Press the lockdown button to activate firewall defense."
+                           Style="{StaticResource BodyTextBlockStyle}"
+                           HorizontalAlignment="Center"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            </StackPanel>
+        </Grid>
+
+        <!-- Active dashboard grid -->
+        <Grid x:Name="ActiveGrid" Grid.Row="1" Visibility="Collapsed">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="200" />
+            </Grid.RowDefinitions>
+
+            <!-- Pending connections list -->
+            <ListView x:Name="PendingListView"
+                      Grid.Row="0"
+                      SelectionChanged="PendingListView_SelectionChanged"
+                      BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                      BorderThickness="1">
+                <ListView.ItemTemplate>
+                    <DataTemplate>
+                        <Grid Padding="8,4" ColumnSpacing="8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <!-- App name + direction -->
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding FileName}" FontWeight="SemiBold" />
+                                <TextBlock Text="{Binding Direction}" FontSize="11"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            </StackPanel>
+
+                            <!-- Remote address -->
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding RemoteAddress}"
+                                       VerticalAlignment="Center" FontSize="12" />
+
+                            <!-- Protocol -->
+                            <TextBlock Grid.Column="2"
+                                       Text="{Binding Protocol}"
+                                       VerticalAlignment="Center" FontSize="12" />
+
+                            <!-- Allow button -->
+                            <Button Grid.Column="3"
+                                    Content="Allow"
+                                    Background="#CCFFCC"
+                                    Foreground="Black"
+                                    Padding="8,4"
+                                    Tag="{Binding}"
+                                    Click="AllowButton_Click" />
+
+                            <!-- Block button -->
+                            <Button Grid.Column="4"
+                                    Content="Block"
+                                    Background="#FFCCCC"
+                                    Foreground="Black"
+                                    Padding="8,4"
+                                    Tag="{Binding}"
+                                    Click="BlockButton_Click" />
+
+                            <!-- Ignore button -->
+                            <Button Grid.Column="5"
+                                    Content="Ignore"
+                                    Padding="8,4"
+                                    Tag="{Binding}"
+                                    Click="IgnoreButton_Click" />
+                        </Grid>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+
+            <!-- Splitter -->
+            <Border Grid.Row="1" Height="4" Background="Transparent" />
+
+            <!-- Details panel -->
+            <Border Grid.Row="2"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1" CornerRadius="4">
+                <ScrollViewer>
+                    <TextBlock x:Name="DetailsTextBlock"
+                               Padding="12"
+                               TextWrapping="Wrap"
+                               FontFamily="Consolas"
+                               FontSize="12" />
+                </ScrollViewer>
+            </Border>
+        </Grid>
+
+        <!-- Status bar -->
+        <TextBlock x:Name="StatusText" Grid.Row="2"
+                   Margin="0,8,0,0" FontSize="11"
+                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+    </Grid>
+</Page>

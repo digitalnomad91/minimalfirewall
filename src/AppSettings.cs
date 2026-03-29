@@ -5,7 +5,6 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Windows.Forms;
 
 namespace MinimalFirewall
 {
@@ -45,7 +44,7 @@ namespace MinimalFirewall
 
         private Point _windowLocation = new Point(100, 100);
         private Size _windowSize = new Size(1280, 800);
-        private int _windowState = (int)FormWindowState.Maximized;
+        private int _windowState = 2; // 2 = Maximized
 
         public bool IsPopupsEnabled { get => _isPopupsEnabled; set => SetField(ref _isPopupsEnabled, value); }
         public bool IsLoggingEnabled { get => _isLoggingEnabled; set => SetField(ref _isLoggingEnabled, value); }

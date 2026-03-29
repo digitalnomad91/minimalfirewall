@@ -8,7 +8,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
-using System.Windows.Forms;
+
 using System;
 
 namespace MinimalFirewall
@@ -89,7 +89,7 @@ namespace MinimalFirewall
             catch (EventLogException ex)
             {
                 _logAction($"[EventListener ERROR] Permission denied reading Security log: {ex.Message}");
-                MessageBox.Show("Could not start firewall event listener. Please run as Administrator.", "Permission Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Debug.WriteLine("Could not start firewall event listener. Please run as Administrator.", "Permission Error");
             }
         }
 

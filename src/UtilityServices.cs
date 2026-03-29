@@ -1,4 +1,4 @@
-﻿using DarkModeForms;
+﻿
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -27,7 +27,7 @@ namespace MinimalFirewall
             catch (Exception ex)
             {
                 Debug.WriteLine($"[AdminTask ERROR] Firewall reset failed: {ex.Message}");
-                Messenger.MessageBox($"Could not reset Windows Firewall.\n\nError: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                UIErrorNotifier.Notify($"Could not reset Windows Firewall.\n\nError: {ex.Message}", "Error");
             }
             finally
             {
@@ -149,7 +149,7 @@ namespace MinimalFirewall
 
                     Debug.WriteLine($"[AdminTask] Exit Code: {process.ExitCode}");
                     if (!string.IsNullOrWhiteSpace(errors))
-                        Messenger.MessageBox($"An error occurred during an administrative task:\n\n{errors}", "Admin Task Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        UIErrorNotifier.Notify($"An error occurred during an administrative task:\n\n{errors}", "Admin Task Error");
                 }
                 else
                 {
@@ -160,13 +160,13 @@ namespace MinimalFirewall
                     }
                     catch { /* Ignore errors if process already died */ }
 
-                    Messenger.MessageBox("An administrative task timed out and may not have completed successfully.", "Execution Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    UIErrorNotifier.Notify("An administrative task timed out and may not have completed successfully.", "Execution Error");
                 }
             }
             catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or ObjectDisposedException or InvalidOperationException)
             {
                 Debug.WriteLine($"[AdminTask FATAL ERROR] {ex}");
-                Messenger.MessageBox($"A critical error occurred while trying to run an administrative task:\n\n{ex.Message}", "Execution Exception", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                UIErrorNotifier.Notify($"A critical error occurred while trying to run an administrative task:\n\n{ex.Message}", "Execution Exception");
             }
         }
     }

@@ -1,0 +1,50 @@
+<Page
+    x:Class="MinimalFirewall.Pages.GroupsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:CommunityToolkit.WinUI.UI.Controls"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+    <Grid Padding="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <TextBlock Grid.Row="0" Text="Firewall Rule Groups"
+                   Style="{StaticResource SubtitleTextBlockStyle}"
+                   Margin="0,0,0,12" />
+
+        <!-- Groups grid with toggle switches -->
+        <controls:DataGrid
+            x:Name="GroupsDataGrid"
+            Grid.Row="1"
+            AutoGenerateColumns="False"
+            IsReadOnly="True"
+            GridLinesVisibility="Horizontal"
+            CanUserResizeColumns="True"
+            CanUserSortColumns="True">
+            <controls:DataGrid.Columns>
+                <controls:DataGridTextColumn Header="Group Name" Binding="{Binding Name}" Width="*" />
+                <controls:DataGridTextColumn Header="Rule Count" Binding="{Binding RuleCount}" Width="100" />
+                <controls:DataGridTemplateColumn Header="Enabled" Width="100">
+                    <controls:DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <ToggleSwitch IsOn="{Binding IsEnabled, Mode=TwoWay}"
+                                         Toggled="GroupToggle_Toggled"
+                                         Margin="0,-14,0,-14"
+                                         OnContent="" OffContent="" />
+                        </DataTemplate>
+                    </controls:DataGridTemplateColumn.CellTemplate>
+                </controls:DataGridTemplateColumn>
+            </controls:DataGrid.Columns>
+        </controls:DataGrid>
+
+        <!-- Status -->
+        <TextBlock x:Name="GroupsStatusText" Grid.Row="2"
+                   Margin="0,4,0,0" FontSize="11"
+                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+    </Grid>
+</Page>

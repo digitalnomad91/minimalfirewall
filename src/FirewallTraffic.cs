@@ -8,8 +8,6 @@ using System.Diagnostics;
 using System.Net;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
-using System.Windows.Forms;
-using System.Windows.Input;
 
 namespace Firewall.Traffic
 {
@@ -208,8 +206,8 @@ namespace Firewall.Traffic.ViewModels
         public int LocalPort => Connection.LocalEndPoint.Port;
         public int RemotePort => Connection.RemoteEndPoint.Port;
 
-        public ICommand KillProcessCommand { get; }
-        public ICommand BlockRemoteIpCommand { get; }
+        public Action KillProcessCommand { get; }
+        public Action BlockRemoteIpCommand { get; }
 
         public TcpConnectionViewModel(TcpTrafficTracker.TcpTrafficRow connection, (string Name, string Path, string ServiceName) processInfo, BackgroundFirewallTaskService backgroundTaskService)
         {
@@ -225,8 +223,8 @@ namespace Firewall.Traffic.ViewModels
             RemoteAddress = connection.RemoteEndPoint.Address.ToString();
             State = TcpTrafficTracker.GetStateString(Connection.State);
 
-            KillProcessCommand = new RelayCommand(KillProcess, CanKillProcess);
-            BlockRemoteIpCommand = new RelayCommand(BlockIp, () => true);
+            KillProcessCommand = KillProcess;
+            BlockRemoteIpCommand = BlockIp;
         }
 
         private void KillProcess()
@@ -238,7 +236,7 @@ namespace Firewall.Traffic.ViewModels
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to kill process: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Debug.WriteLine($"Failed to kill process: {ex.Message}");
             }
         }
 
@@ -269,8 +267,7 @@ namespace Firewall.Traffic.ViewModels
 
             var payload = new CreateAdvancedRulePayload { ViewModel = rule, InterfaceTypes = rule.InterfaceTypes, IcmpTypesAndCodes = rule.IcmpTypesAndCodes };
             _backgroundTaskService.EnqueueTask(new FirewallTask(FirewallTaskType.CreateAdvancedRule, payload));
-
-            MessageBox.Show($"Firewall rule queued to block all traffic to/from {RemoteAddress}.", "Rule Queued", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            Debug.WriteLine($"Firewall rule queued to block all traffic to/from {RemoteAddress}.");
         }
     }
 
@@ -296,25 +293,27 @@ namespace Firewall.Traffic.ViewModels
             ActiveConnections.Clear();
         }
 
+        public void RefreshConnections()
+        {
+            var rows = TcpTrafficTracker.GetConnections();
+            var newItems = rows.Select(r =>
+            {
+                // Best-effort process name lookup
+                string procName = "", procPath = "", svcName = "";
+                try
+                {
+                    var proc = System.Diagnostics.Process.GetProcessById((int)r.ProcessId);
+                    procName = proc.ProcessName;
+                    procPath = proc.MainModule?.FileName ?? "";
+                }
+                catch { }
+                return new TcpConnectionViewModel(r, (procName, procPath, svcName), null!);
+            }).ToList();
+            ActiveConnections = new ObservableCollection<TcpConnectionViewModel>(newItems);
+        }
+
         public event PropertyChangedEventHandler? PropertyChanged;
         private void OnPropertyChanged(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 
-    public class RelayCommand : ICommand
-    {
-        private readonly Action _execute;
-        private readonly Func<bool> _canExecute;
-
-        public event EventHandler? CanExecuteChanged;
-
-        public RelayCommand(Action execute, Func<bool> canExecute)
-        {
-            _execute = execute ?? throw new ArgumentNullException(nameof(execute));
-            _canExecute = canExecute ?? throw new ArgumentNullException(nameof(canExecute));
-        }
-
-        public bool CanExecute(object? parameter) => _canExecute();
-        public void Execute(object? parameter) => _execute();
-        public void RaiseCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
-    }
 }

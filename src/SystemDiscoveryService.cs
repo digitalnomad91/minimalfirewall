@@ -1,4 +1,4 @@
-﻿using DarkModeForms;
+﻿
 using System.IO;
 using System.Management;
 using System.Diagnostics;
@@ -51,7 +51,7 @@ namespace MinimalFirewall
                 Debug.WriteLine("WMI Query failed: " + ex.Message);
                 if (!_wmiQueryFailedMessageShown)
                 {
-                    Messenger.MessageBox("Could not query Windows Services (WMI).", "Feature Unavailable", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    UIErrorNotifier.Notify("Could not query Windows Services (WMI). Feature Unavailable.", "Feature Unavailable");
                     _wmiQueryFailedMessageShown = true;
                 }
             }
