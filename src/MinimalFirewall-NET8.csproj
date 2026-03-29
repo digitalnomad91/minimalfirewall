@@ -8,6 +8,7 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<UseWinUI>true</UseWinUI>
 		<WindowsPackageType>None</WindowsPackageType>
+		<SelfContained>true</SelfContained>
 		<WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
 		<EnableMsixTooling>true</EnableMsixTooling>
 		<ApplicationIcon>logo.ico</ApplicationIcon>
@@ -49,6 +50,9 @@
 		<PackageReference Include="Microsoft.WindowsAppSDK" Version="1.6.250228001" />
 		<PackageReference Include="CommunityToolkit.WinUI.UI.Controls.DataGrid" Version="7.1.2" />
 		<PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.5" />
+		<PackageReference Include="Microsoft.Win32.SystemEvents" Version="10.0.0" />
+		<PackageReference Include="System.Diagnostics.EventLog" Version="10.0.0" />
+		<PackageReference Include="System.Drawing.Common" Version="10.0.0" />
 		<PackageReference Include="System.Management" Version="10.0.5" />
 	</ItemGroup>
 
