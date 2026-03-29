@@ -1,31 +1,34 @@
-﻿// File: IconService.cs
+// File: IconService.cs
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Runtime.InteropServices;
-using System.Windows.Forms;
 
 namespace MinimalFirewall
 {
-    public class IconService : Component
+    /// <summary>
+    /// Extracts and caches application icons using Win32 Shell APIs.
+    /// Returns System.Drawing.Bitmap objects for use in the UI.
+    /// </summary>
+    public class IconService
     {
-        private ImageList? _imageList;
-        private readonly Dictionary<string, int> _iconCache = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, int> _indexCache = new(StringComparer.OrdinalIgnoreCase);
+        private readonly List<Bitmap> _icons = new();
         private int _defaultIconIndex = -1;
         private int _systemIconIndex = -1;
 
         #region Native Methods
-        [DllImport("shell32.dll", CharSet = CharSet.Auto)]
-        private static extern IntPtr SHGetFileInfo(string pszPath, uint dwFileAttributes, ref SHFILEINFO psfi, uint cbFileInfo, uint uFlags);
+        [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+        private static extern IntPtr SHGetFileInfo(string pszPath, uint dwFileAttributes,
+            ref SHFILEINFO psfi, uint cbFileInfo, uint uFlags);
 
-        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+        [DllImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
         private static extern bool DestroyIcon(IntPtr hIcon);
 
-        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
         private struct SHFILEINFO
         {
             public IntPtr hIcon;
@@ -37,177 +40,80 @@ namespace MinimalFirewall
             public string szTypeName;
         }
 
-        private const uint SHGFI_ICON = 0x000000100;
-        private const uint SHGFI_LARGEICON = 0x000000000;
-        private const uint SHGFI_SMALLICON = 0x000000001;
+        private const uint SHGFI_ICON = 0x100;
+        private const uint SHGFI_SMALLICON = 0x1;
+        private const uint SHGFI_LARGEICON = 0x0;
         #endregion
 
-        [DefaultValue(null)]
-        public ImageList? ImageList
+        public IconService()
         {
-            get => _imageList;
-            set
-            {
-                _imageList = value;
-                if (_imageList != null)
-                {
-                    AddDefaultIcon();
-                    AddSystemIcon();
-                }
-            }
-        }
-
-        public IconService() { }
-
-        public IconService(IContainer container)
-        {
-            container.Add(this);
+            AddDefaultIcon();
         }
 
         private void AddDefaultIcon()
         {
-            if (_imageList == null || _imageList.Images.ContainsKey("default")) return;
-            try
-            {
-                var bmp = new Bitmap(32, 32);
-                using (var g = Graphics.FromImage(bmp))
-                {
-                    g.Clear(Color.Transparent);
-                }
-                _imageList.Images.Add("default", (Bitmap)bmp.Clone());
-                bmp.Dispose();
-
-                _defaultIconIndex = _imageList.Images.Count - 1;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[IconService] Failed to create default icon: {ex.Message}");
-            }
+            var bmp = new Bitmap(32, 32);
+            using var g = Graphics.FromImage(bmp);
+            g.Clear(Color.Transparent);
+            _defaultIconIndex = _icons.Count;
+            _systemIconIndex = _defaultIconIndex;
+            _icons.Add(bmp);
         }
 
-        private void AddSystemIcon()
-        {
-            if (_imageList == null || _imageList.Images.ContainsKey("system_icon")) return;
-            try
-            {
-                if (_imageList.Images.ContainsKey("advanced.png"))
-                {
-                    Image systemImage = _imageList.Images["advanced.png"];
-                    _imageList.Images.Add("system_icon", systemImage);
-                    _systemIconIndex = _imageList.Images.Count - 1;
-                }
-                else
-                {
-                    _systemIconIndex = _defaultIconIndex;
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[IconService] Failed to create system icon: {ex.Message}");
-                _systemIconIndex = _defaultIconIndex;
-            }
-        }
-
+        /// <summary>Returns the 0-based index into the icon list, or -1 on failure.</summary>
         public int GetIconIndex(string? filePath)
         {
-            if (string.IsNullOrEmpty(filePath) || _imageList == null)
+            if (string.IsNullOrEmpty(filePath)) return _systemIconIndex;
+            if (_indexCache.TryGetValue(filePath, out int cached)) return cached;
+            if (!File.Exists(filePath)) return _systemIconIndex;
+
+            var shinfo = new SHFILEINFO();
+            IntPtr result = SHGetFileInfo(filePath, 0, ref shinfo,
+                (uint)Marshal.SizeOf<SHFILEINFO>(), SHGFI_ICON | SHGFI_SMALLICON);
+
+            if (result != IntPtr.Zero && shinfo.hIcon != IntPtr.Zero)
             {
-                return _systemIconIndex;
-            }
-
-            if (_iconCache.TryGetValue(filePath, out int cachedIndex))
-            {
-                return cachedIndex;
-            }
-
-            if (!File.Exists(filePath))
-            {
-                return _systemIconIndex;
-            }
-
-            // Check ImageList size to request the correct icon size
-            uint iconSizeFlag = _imageList.ImageSize.Width <= 16 ? SHGFI_SMALLICON : SHGFI_LARGEICON;
-
-            IntPtr hIcon = IntPtr.Zero;
-            try
-            {
-                var shinfo = new SHFILEINFO();
-                // Add the size flag to the standard icon flag
-                uint flags = SHGFI_ICON | iconSizeFlag;
-
-                SHGetFileInfo(filePath, 0, ref shinfo, (uint)Marshal.SizeOf(shinfo), flags);
-                hIcon = shinfo.hIcon;
-
-                if (hIcon != IntPtr.Zero)
+                try
                 {
-                    Icon icon = (Icon)Icon.FromHandle(hIcon).Clone();
-                    _imageList.Images.Add(filePath, icon);
-
-                    int newIndex = _imageList.Images.Count - 1;
-                    _iconCache[filePath] = newIndex;
-                    return newIndex;
+                    using var icon = Icon.FromHandle(shinfo.hIcon);
+                    var bmp = icon.ToBitmap();
+                    int idx = _icons.Count;
+                    _icons.Add(bmp);
+                    _indexCache[filePath] = idx;
+                    return idx;
                 }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[IconService] SHGetFileInfo failed for {filePath}: {ex.Message}");
-            }
-            finally
-            {
-                if (hIcon != IntPtr.Zero)
+                catch (Exception ex)
                 {
-                    DestroyIcon(hIcon);
+                    Debug.WriteLine($"[IconService] FromHandle failed for {filePath}: {ex.Message}");
+                }
+                finally
+                {
+                    DestroyIcon(shinfo.hIcon);
                 }
             }
 
-            try
-            {
-                using (Icon? icon = Icon.ExtractAssociatedIcon(filePath))
-                {
-                    if (icon != null)
-                    {
-                        _imageList.Images.Add(filePath, (Icon)icon.Clone());
-
-                        int newIndex = _imageList.Images.Count - 1;
-                        _iconCache[filePath] = newIndex;
-                        return newIndex;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[IconService] Fallback icon extraction failed for {filePath}: {ex.Message}");
-            }
-
-            _iconCache[filePath] = _systemIconIndex;
+            _indexCache[filePath] = _systemIconIndex;
             return _systemIconIndex;
         }
 
+        /// <summary>Returns the Bitmap for the given icon index, or null.</summary>
+        public Bitmap? GetBitmap(int index)
+        {
+            if (index >= 0 && index < _icons.Count) return _icons[index];
+            return null;
+        }
+
+        /// <summary>Convenience: get Bitmap for a file path.</summary>
+        public Bitmap? GetIconBitmap(string? filePath)
+            => GetBitmap(GetIconIndex(filePath));
+
         public void ClearCache()
         {
-            if (_imageList == null)
-            {
-                _iconCache.Clear();
-                return;
-            }
-
-            var keysToRemove = new List<string>();
-            foreach (var key in _iconCache.Keys)
-            {
-                if (key != "default" && key != "system_icon")
-                {
-                    keysToRemove.Add(key);
-                }
-            }
-
-            foreach (var key in keysToRemove)
-            {
-                if (_imageList.Images.ContainsKey(key))
-                {
-                    _imageList.Images.RemoveByKey(key);
-                }
-            }
-            _iconCache.Clear();
+            // Keep default/system icons (index 0), dispose the rest
+            for (int i = 1; i < _icons.Count; i++)
+                _icons[i]?.Dispose();
+            _icons.RemoveRange(1, _icons.Count - 1);
+            _indexCache.Clear();
         }
     }
 }

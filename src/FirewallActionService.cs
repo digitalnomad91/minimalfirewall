@@ -4,7 +4,6 @@ using System.IO;
 using MinimalFirewall.TypedObjects;
 using System.Collections.Generic;
 using System.Linq;
-using System.Windows.Forms;
 using System.Threading.Tasks;
 using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
@@ -429,20 +428,15 @@ namespace MinimalFirewall
             );
         }
 
-        // Thread-safe wrapper for MessageBox
-        private void SafeShowMessageBox(string text, string caption, MessageBoxButtons buttons, MessageBoxIcon icon)
+        // Thread-safe wrapper for showing errors via event/log
+        private void SafeShowMessageBox(string text, string caption, object buttons, object icon)
         {
-            if (Application.OpenForms.Count > 0)
-            {
-                var form = Application.OpenForms[0];
-                if (form.InvokeRequired)
-                {
-                    form.Invoke(new Action(() => MessageBox.Show(form, text, caption, buttons, icon)));
-                    return;
-                }
-            }
-            MessageBox.Show(text, caption, buttons, icon);
+            activityLogger.LogDebug($"[{caption}] {text}");
+            MessageBoxCallback?.Invoke(text, caption);
         }
+
+        /// <summary>Optional callback invoked when a message box needs to be shown.</summary>
+        public Action<string, string>? MessageBoxCallback { get; set; }
 
         public void ToggleLockdown()
         {
@@ -473,7 +467,7 @@ namespace MinimalFirewall
                     "1. A local or domain Group Policy is preventing this change.\n" +
                     "2. Other security software is blocking this action.\n\n" +
                     "The firewall's default policy will be set back to 'Allow' for safety.",
-                     "Lockdown Mode Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                     "Lockdown Mode Failed", null, null);
                 try
                 {
                     firewallService.SetDefaultOutboundAction(NET_FW_ACTION_.NET_FW_ACTION_ALLOW);
@@ -495,7 +489,7 @@ namespace MinimalFirewall
             {
                 activityLogger.LogException("SetDefaultOutboundAction", ex);
                 SafeShowMessageBox("Failed to change default outbound policy.\nCheck debug_log.txt for details.",
-                "Lockdown Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                "Lockdown Error", null, null);
                 return;
             }
 
@@ -886,7 +880,7 @@ namespace MinimalFirewall
                 string msg = $"Created {successCount} rules successfully.\n\nFailed to create {errors.Count} rules:\n" + string.Join("\n", errors.Take(5));
                 if (errors.Count > 5) msg += $"\n...and {errors.Count - 5} more.";
 
-                SafeShowMessageBox(msg, "Batch Creation Errors", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                SafeShowMessageBox(msg, "Batch Creation Errors", null, null);
             }
         }
 

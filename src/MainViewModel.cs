@@ -1,6 +1,4 @@
-﻿using DarkModeForms;
-using Firewall.Traffic.ViewModels;
-using Microsoft.VisualBasic.ApplicationServices;
+﻿using Firewall.Traffic.ViewModels;
 using MinimalFirewall.TypedObjects;
 using System;
 using System.Collections.Concurrent;
@@ -12,7 +10,6 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Forms;
 
 namespace MinimalFirewall
 {
@@ -643,46 +640,23 @@ namespace MinimalFirewall
 
         public async Task CleanUpOrphanedRulesAsync()
         {
-            using var statusForm = new StatusForm("Scanning for orphaned rules...", _appSettings);
-            statusForm.Show(Form.ActiveForm);
-            var progress = new Progress<int>(p => statusForm.UpdateProgress(p));
+            var progress = new Progress<int>(_ => { });
             var cts = new CancellationTokenSource();
-            statusForm.FormClosing += (s, e) =>
-            {
-                if (e.CloseReason == CloseReason.UserClosing)
-                {
-                    cts.Cancel();
-                }
-            };
             try
             {
+                StatusTextChanged?.Invoke("Scanning for orphaned rules…");
                 var deletedRules = await _actionsService.CleanUpOrphanedRulesAsync(cts.Token, progress);
-                if (!cts.IsCancellationRequested)
-                {
-                    statusForm.Close();
-                    Messenger.MessageBox(
-                        $"{deletedRules.Count} orphaned rule(s) found and deleted.",
-                        "Cleanup Complete",
-                        MessageBoxButtons.OK,
-                        MsgIcon.None);
-                    ClearRulesCache();
-                }
+                StatusTextChanged?.Invoke($"{deletedRules.Count} orphaned rule(s) found and deleted.");
+                ClearRulesCache();
             }
             catch (OperationCanceledException)
             {
+                StatusTextChanged?.Invoke("");
             }
             catch (Exception ex)
             {
                 _activityLogger.LogException("CleanUpOrphanedRulesAsync", ex);
-                if (!statusForm.IsDisposed)
-                {
-                    statusForm.Close();
-                }
-                Messenger.MessageBox(
-                    "An error occurred during the cleanup process. Please check the debug log for details.",
-                    "Cleanup Error",
-                    MessageBoxButtons.OK,
-                    MsgIcon.Error);
+                StatusTextChanged?.Invoke("Error during cleanup. Check log.");
             }
         }
     }
