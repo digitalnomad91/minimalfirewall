@@ -1,4 +1,4 @@
-using CommunityToolkit.WinUI.Controls;
+using CommunityToolkit.WinUI.UI.Controls;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
@@ -75,10 +75,10 @@ namespace MinimalFirewall.Pages
         private void SearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
         {
             _searchDebounce?.Dispose();
-            _searchDebounce = new System.Threading.Timer(async _ =>
+            _searchDebounce = new System.Threading.Timer(_ =>
             {
                 _appSettings.RulesSearchText = sender.Text;
-                await DispatcherQueue.EnqueueAsync(OnTabSelectedAsync);
+                DispatcherQueue.TryEnqueue(async () => await OnTabSelectedAsync());
             }, null, 300, Timeout.Infinite);
         }
 

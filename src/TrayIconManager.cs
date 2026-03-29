@@ -127,8 +127,8 @@ namespace MinimalFirewall
                 ms.Position = 0;
                 // Create HICON from stream bytes using Win32
                 _lockedIcon = LoadIconFromBytes(ms.ToArray());
-                _unlockedIcon = RecolorIcon(_lockedIcon, new System.Drawing.Color[] { }, System.Drawing.Color.Red);
-                _alertIcon = RecolorIcon(_lockedIcon, new System.Drawing.Color[] { }, System.Drawing.Color.Orange);
+                _unlockedIcon = RecolorIcon(_lockedIcon, System.Drawing.Color.ForestGreen);
+                _alertIcon = RecolorIcon(_lockedIcon, System.Drawing.Color.Orange);
             }
         }
 
@@ -142,7 +142,7 @@ namespace MinimalFirewall
             return icon;
         }
 
-        private static IntPtr RecolorIcon(IntPtr srcIcon, System.Drawing.Color[] _, System.Drawing.Color tint)
+        private static IntPtr RecolorIcon(IntPtr srcIcon, System.Drawing.Color tint)
         {
             if (srcIcon == IntPtr.Zero) return IntPtr.Zero;
             try

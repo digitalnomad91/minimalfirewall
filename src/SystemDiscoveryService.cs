@@ -51,7 +51,7 @@ namespace MinimalFirewall
                 Debug.WriteLine("WMI Query failed: " + ex.Message);
                 if (!_wmiQueryFailedMessageShown)
                 {
-                    System.Diagnostics.Debug.WriteLine("Could not query Windows Services (WMI).");
+                    UIErrorNotifier.Notify("Could not query Windows Services (WMI). Feature Unavailable.", "Feature Unavailable");
                     _wmiQueryFailedMessageShown = true;
                 }
             }

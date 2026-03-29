@@ -63,30 +63,37 @@
             <!-- Maintenance -->
             <StackPanel>
                 <TextBlock Text="Maintenance" Style="{StaticResource SubtitleTextBlockStyle}" Margin="0,0,0,8" />
-                <WrapPanel Orientation="Horizontal" HorizontalSpacing="8" VerticalSpacing="8">
-                    <Button x:Name="ManagePublishersButton" Content="Manage Publishers…"
-                            Click="ManagePublishersButton_Click" />
-                    <Button x:Name="CleanUpOrphanedButton" Content="Clean Orphaned Rules"
-                            Click="CleanUpOrphanedButton_Click" />
-                    <Button x:Name="ExportRulesButton" Content="Export Rules…"
-                            Click="ExportRulesButton_Click" />
-                    <Button x:Name="ImportMergeButton" Content="Import (Merge)…"
-                            Click="ImportMergeButton_Click" />
-                    <Button x:Name="ImportReplaceButton" Content="Import (Replace)…"
-                            Click="ImportReplaceButton_Click" />
-                    <Button x:Name="DeleteAllRulesButton" Content="Delete All MFW Rules"
-                            Click="DeleteAllRulesButton_Click" />
-                    <Button x:Name="RevertFirewallButton" Content="Revert Firewall to Defaults"
-                            Click="RevertFirewallButton_Click" />
-                    <Button x:Name="OpenFirewallButton" Content="Open Windows Firewall"
-                            Click="OpenFirewallButton_Click" />
-                    <Button x:Name="OpenAppDataButton" Content="Open App Data Folder"
-                            Click="OpenAppDataButton_Click" />
-                    <Button x:Name="CheckUpdatesButton" Content="Check for Updates"
-                            Click="CheckUpdatesButton_Click" />
-                    <Button x:Name="ExportDiagnosticButton" Content="Export Diagnostic…"
-                            Click="ExportDiagnosticButton_Click" />
-                </WrapPanel>
+                <ItemsControl x:Name="MaintenanceButtons">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <ItemsWrapGrid Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.Items>
+                        <Button x:Name="ManagePublishersButton" Content="Manage Publishers…" Margin="0,0,8,8"
+                                Click="ManagePublishersButton_Click" />
+                        <Button x:Name="CleanUpOrphanedButton" Content="Clean Orphaned Rules" Margin="0,0,8,8"
+                                Click="CleanUpOrphanedButton_Click" />
+                        <Button x:Name="ExportRulesButton" Content="Export Rules…" Margin="0,0,8,8"
+                                Click="ExportRulesButton_Click" />
+                        <Button x:Name="ImportMergeButton" Content="Import (Merge)…" Margin="0,0,8,8"
+                                Click="ImportMergeButton_Click" />
+                        <Button x:Name="ImportReplaceButton" Content="Import (Replace)…" Margin="0,0,8,8"
+                                Click="ImportReplaceButton_Click" />
+                        <Button x:Name="DeleteAllRulesButton" Content="Delete All MFW Rules" Margin="0,0,8,8"
+                                Click="DeleteAllRulesButton_Click" />
+                        <Button x:Name="RevertFirewallButton" Content="Revert Firewall to Defaults" Margin="0,0,8,8"
+                                Click="RevertFirewallButton_Click" />
+                        <Button x:Name="OpenFirewallButton" Content="Open Windows Firewall" Margin="0,0,8,8"
+                                Click="OpenFirewallButton_Click" />
+                        <Button x:Name="OpenAppDataButton" Content="Open App Data Folder" Margin="0,0,8,8"
+                                Click="OpenAppDataButton_Click" />
+                        <Button x:Name="CheckUpdatesButton" Content="Check for Updates" Margin="0,0,8,8"
+                                Click="CheckUpdatesButton_Click" />
+                        <Button x:Name="ExportDiagnosticButton" Content="Export Diagnostic (Rules + Config)…" Margin="0,0,8,8"
+                                Click="ExportDiagnosticButton_Click" />
+                    </ItemsControl.Items>
+                </ItemsControl>
             </StackPanel>
 
             <!-- About -->

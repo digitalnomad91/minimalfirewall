@@ -1,12 +1,9 @@
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
-using Microsoft.Windows.AppLifecycle;
 using System;
 using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Threading;
-using Windows.Win32;
-using WinRT;
 
 namespace MinimalFirewall
 {

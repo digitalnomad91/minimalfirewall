@@ -4,7 +4,10 @@ using MinimalFirewall.Dialogs;
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Text.Json;
+using System.Threading.Tasks;
+
 
 namespace MinimalFirewall.Pages
 {
@@ -234,12 +237,51 @@ namespace MinimalFirewall.Pages
             var picker = new Windows.Storage.Pickers.FileSavePicker();
             WinRT.Interop.InitializeWithWindow.Initialize(picker,
                 WinRT.Interop.WindowNative.GetWindowHandle(App.Instance.MainWindow!));
-            picker.SuggestedFileName = "MFW_Rules_Export.json";
-            picker.FileTypeChoices.Add("JSON", new[] { ".json" });
+            picker.SuggestedFileName = "MFW_Diagnostic.zip";
+            picker.FileTypeChoices.Add("ZIP Archive", new[] { ".zip" });
             var file = await picker.PickSaveFileAsync();
             if (file == null) return;
-            string json = await _actionsService.ExportAllMfwRulesAsync();
-            await Windows.Storage.FileIO.WriteTextAsync(file, json);
+
+            try
+            {
+                // Collect diagnostics: exported rules + config paths
+                string rulesJson = await _actionsService.ExportAllMfwRulesAsync();
+                string configDir = ConfigPathManager.GetStorageDirectory();
+
+                using var zipStream = await file.OpenStreamForWriteAsync();
+                using var zip = new System.IO.Compression.ZipArchive(zipStream, System.IO.Compression.ZipArchiveMode.Create);
+
+                // Write rules
+                var rulesEntry = zip.CreateEntry("rules.json");
+                using (var w = new System.IO.StreamWriter(rulesEntry.Open()))
+                    await w.WriteAsync(rulesJson);
+
+                // Include all config JSON files
+                if (Directory.Exists(configDir))
+                {
+                    foreach (var cfgFile in Directory.GetFiles(configDir, "*.json"))
+                    {
+                        var entry = zip.CreateEntry("config/" + Path.GetFileName(cfgFile));
+                        using var src = File.OpenRead(cfgFile);
+                        using var dst = entry.Open();
+                        await src.CopyToAsync(dst);
+                    }
+                }
+
+                // Include recent activity log lines
+                string logPath = Path.Combine(configDir, "mfw_activity.log");
+                if (File.Exists(logPath))
+                {
+                    var logEntry = zip.CreateEntry("mfw_activity.log");
+                    using var src = File.OpenRead(logPath);
+                    using var dst = logEntry.Open();
+                    await src.CopyToAsync(dst);
+                }
+            }
+            catch (Exception ex)
+            {
+                UIErrorNotifier.Notify($"Diagnostic export failed: {ex.Message}", "Export Error");
+            }
         }
     }
 }

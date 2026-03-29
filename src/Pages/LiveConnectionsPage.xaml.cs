@@ -1,4 +1,4 @@
-using CommunityToolkit.WinUI.Controls;
+using CommunityToolkit.WinUI.UI.Controls;
 using Firewall.Traffic.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -58,7 +58,8 @@ namespace MinimalFirewall.Pages
             RefreshButton.IsEnabled = false;
             try
             {
-                await DispatcherQueue.EnqueueAsync(RefreshConnections);
+                await Task.Run(RefreshConnections);
+                DispatcherQueue.TryEnqueue(RefreshConnections);
             }
             finally
             {

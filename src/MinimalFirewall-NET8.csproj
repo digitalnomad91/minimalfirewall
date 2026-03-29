@@ -20,7 +20,7 @@
 		<Product>Minimal Firewall</Product>
 		<PackageProjectUrl>https://github.com/deminimis/minimalfirewall</PackageProjectUrl>
 		<PackageTags>firewall, security, privacy</PackageTags>
-		<StartupObject>MinimalFirewall.Program</StartupObject>
+		<StartupObject>MinimalFirewall.App</StartupObject>
 		<Configurations>Debug;Release</Configurations>
 		<Platforms>AnyCPU;x64</Platforms>
 		<ServerGarbageCollection>false</ServerGarbageCollection>
@@ -46,7 +46,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.WindowsAppSDK" Version="1.6.250228001" />
-		<PackageReference Include="CommunityToolkit.WinUI.Controls.DataGrid" Version="8.2.250402" />
+		<PackageReference Include="CommunityToolkit.WinUI.UI.Controls.DataGrid" Version="7.1.2" />
 		<PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.5" />
 		<PackageReference Include="System.Management" Version="10.0.5" />
 	</ItemGroup>

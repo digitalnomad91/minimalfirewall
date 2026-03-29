@@ -27,7 +27,7 @@ namespace MinimalFirewall
             catch (Exception ex)
             {
                 Debug.WriteLine($"[AdminTask ERROR] Firewall reset failed: {ex.Message}");
-                System.Diagnostics.Debug.WriteLine($"Could not reset Windows Firewall.\n\nError: {ex.Message}");
+                UIErrorNotifier.Notify($"Could not reset Windows Firewall.\n\nError: {ex.Message}", "Error");
             }
             finally
             {
@@ -149,7 +149,7 @@ namespace MinimalFirewall
 
                     Debug.WriteLine($"[AdminTask] Exit Code: {process.ExitCode}");
                     if (!string.IsNullOrWhiteSpace(errors))
-                        System.Diagnostics.Debug.WriteLine($"An error occurred during an administrative task:\n\n{errors}");
+                        UIErrorNotifier.Notify($"An error occurred during an administrative task:\n\n{errors}", "Admin Task Error");
                 }
                 else
                 {
@@ -160,13 +160,13 @@ namespace MinimalFirewall
                     }
                     catch { /* Ignore errors if process already died */ }
 
-                    System.Diagnostics.Debug.WriteLine("An administrative task timed out and may not have completed successfully.");
+                    UIErrorNotifier.Notify("An administrative task timed out and may not have completed successfully.", "Execution Error");
                 }
             }
             catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or ObjectDisposedException or InvalidOperationException)
             {
                 Debug.WriteLine($"[AdminTask FATAL ERROR] {ex}");
-                System.Diagnostics.Debug.WriteLine($"A critical error occurred while trying to run an administrative task:\n\n{ex.Message}");
+                UIErrorNotifier.Notify($"A critical error occurred while trying to run an administrative task:\n\n{ex.Message}", "Execution Exception");
             }
         }
     }

@@ -85,6 +85,18 @@ namespace MinimalFirewall
             _backgroundTaskService.QueueCountChanged += OnQueueCountChanged;
             _backgroundTaskService.WildcardRulesChanged += OnWildcardRulesChanged;
             _mainViewModel.StatusTextChanged += text => DispatcherQueue.TryEnqueue(() => StatusTextBlock.Text = text);
+            UIErrorNotifier.ErrorOccurred += (msg, title) =>
+                DispatcherQueue.TryEnqueue(async () =>
+                {
+                    var dlg = new Microsoft.UI.Xaml.Controls.ContentDialog
+                    {
+                        Title = title,
+                        Content = msg,
+                        CloseButtonText = "OK",
+                        XamlRoot = ContentFrame.XamlRoot
+                    };
+                    try { await dlg.ShowAsync(); } catch { }
+                });
 
             Microsoft.Win32.SystemEvents.UserPreferenceChanged += SystemEvents_UserPreferenceChanged;
 
@@ -144,6 +156,11 @@ namespace MinimalFirewall
         {
             // Select Dashboard by default
             NavView.SelectedItem = NavView.MenuItems[0];
+            // Trigger startup on first load
+            if (!_startMinimized)
+                _ = StartupActivationAsync();
+            else
+                _ = PrepareForTrayAsync();
         }
 
         private async void NavView_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
@@ -250,7 +267,7 @@ namespace MinimalFirewall
             LockdownButton.Style = locked
                 ? (Style)Application.Current.Resources["AccentButtonStyle"]
                 : null;
-            LockdownButton.ToolTipService_ToolTip(locked ? "Disable Lockdown" : "Enable Lockdown");
+            ToolTipService.SetToolTip(LockdownButton, locked ? "Disable Lockdown" : "Enable Lockdown");
 
             // Show/hide dashboard
             if (_dashboardPage != null)
@@ -462,18 +479,6 @@ namespace MinimalFirewall
 
         #region Window Lifecycle
 
-        private async void MainWindow_Activated(object sender, WindowActivatedEventArgs args)
-        {
-            if (!_startMinimized)
-            {
-                await StartupActivationAsync();
-            }
-            else
-            {
-                _ = PrepareForTrayAsync();
-            }
-        }
-
         private bool _startupDone = false;
 
         private async Task StartupActivationAsync()
@@ -626,14 +631,5 @@ namespace MinimalFirewall
             IntPtr process, IntPtr minimumWorkingSetSize, IntPtr maximumWorkingSetSize);
 
         #endregion
-    }
-
-    // Helper extension to set tooltip via code
-    internal static class ButtonExtensions
-    {
-        public static void ToolTipService_ToolTip(this Button btn, string tip)
-        {
-            ToolTipService.SetToolTip(btn, tip);
-        }
     }
 }
