@@ -44,10 +44,12 @@ namespace MinimalFirewall.Pages
         {
             if (sender is ToggleSwitch toggle && toggle.DataContext is FirewallGroup group)
             {
-                var taskType = toggle.IsOn
-                    ? TypedObjects.FirewallTaskType.EnableGroup
-                    : TypedObjects.FirewallTaskType.DisableGroup;
-                _backgroundTaskService.EnqueueTask(new TypedObjects.FirewallTask(taskType, group.Name));
+                var payload = new SetGroupEnabledStatePayload
+                {
+                    GroupName = group.Name,
+                    IsEnabled = toggle.IsOn
+                };
+                _backgroundTaskService.EnqueueTask(new FirewallTask(FirewallTaskType.SetGroupEnabledState, payload));
             }
         }
     }

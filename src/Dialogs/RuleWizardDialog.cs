@@ -174,7 +174,7 @@ namespace MinimalFirewall.Dialogs
                     LocalAddresses = "*",
                     RemoteAddresses = "*",
                     Profiles = "All",
-                    Type = TypedObjects.RuleType.Advanced,
+                    Type = RuleType.Advanced,
                     InterfaceTypes = "All"
                 };
                 _actionsService.CreateAdvancedRule(vm, "All", "*");

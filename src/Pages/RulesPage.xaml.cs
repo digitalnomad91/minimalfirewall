@@ -1,6 +1,7 @@
 using CommunityToolkit.WinUI.UI.Controls;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
 using MinimalFirewall.Dialogs;
 using MinimalFirewall.TypedObjects;
@@ -94,7 +95,7 @@ namespace MinimalFirewall.Pages
 
         private void RulesDataGrid_Sorting(object? sender, DataGridColumnEventArgs e)
         {
-            var propName = (e.Column.Binding as Microsoft.UI.Xaml.Data.Binding)?.Path.Path;
+            var propName = ((e.Column as DataGridBoundColumn)?.Binding as Microsoft.UI.Xaml.Data.Binding)?.Path?.Path;
             if (propName == null) return;
 
             bool asc = e.Column.SortDirection != DataGridSortDirection.Ascending;

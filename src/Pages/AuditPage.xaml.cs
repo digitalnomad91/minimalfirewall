@@ -55,7 +55,7 @@ namespace MinimalFirewall.Pages
                 : _allChanges.Where(c =>
                     (c.Rule.Name?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false) ||
                     (c.Rule.ApplicationName?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false) ||
-                    (c.Rule.Publisher?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false)
+                    (c.Publisher?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false)
                 ).ToList();
 
             AuditDataGrid.ItemsSource = _filteredChanges;
@@ -73,8 +73,8 @@ namespace MinimalFirewall.Pages
             var sb = new StringBuilder();
             var r = change.Rule;
             sb.AppendLine($"Name:         {r.Name}");
-            sb.AppendLine($"Status:       {change.ChangeTypeLabel}");
-            sb.AppendLine($"Action:       {r.Action}");
+            sb.AppendLine($"Status:       {change.Type}");
+            sb.AppendLine($"Action:       {r.Status}");
             sb.AppendLine($"Direction:    {r.Direction}");
             sb.AppendLine($"Protocol:     {r.ProtocolName}");
             sb.AppendLine($"Program:      {r.ApplicationName}");
@@ -83,7 +83,7 @@ namespace MinimalFirewall.Pages
             sb.AppendLine($"Profiles:     {r.Profiles}");
             sb.AppendLine($"Local Ports:  {r.LocalPorts}");
             sb.AppendLine($"Remote Ports: {r.RemotePorts}");
-            sb.AppendLine($"Publisher:    {r.Publisher}");
+            sb.AppendLine($"Publisher:    {change.Publisher}");
             if (!string.IsNullOrEmpty(r.Description))
                 sb.AppendLine($"Description:  {r.Description}");
             DiffTextBlock.Text = sb.ToString();
@@ -91,7 +91,6 @@ namespace MinimalFirewall.Pages
 
         private void AuditDataGrid_Sorting(object? sender, DataGridColumnEventArgs e)
         {
-            var propPath = (e.Column.Binding as Microsoft.UI.Xaml.Data.Binding)?.Path.Path ?? "";
             bool asc = e.Column.SortDirection != DataGridSortDirection.Ascending;
             e.Column.SortDirection = asc ? DataGridSortDirection.Ascending : DataGridSortDirection.Descending;
 

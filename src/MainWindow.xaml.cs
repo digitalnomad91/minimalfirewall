@@ -329,7 +329,10 @@ namespace MinimalFirewall
         {
             bool isDark = _appSettings.Theme == "Dark" ||
                 (_appSettings.Theme == "Auto" && IsSystemDarkMode());
-            RequestedTheme = isDark ? ElementTheme.Dark : ElementTheme.Light;
+            if (Content is FrameworkElement root)
+            {
+                root.RequestedTheme = isDark ? ElementTheme.Dark : ElementTheme.Light;
+            }
         }
 
         private static bool IsSystemDarkMode()

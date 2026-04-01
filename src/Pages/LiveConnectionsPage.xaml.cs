@@ -78,7 +78,7 @@ namespace MinimalFirewall.Pages
 
         private void LiveDataGrid_Sorting(object? sender, DataGridColumnEventArgs e)
         {
-            var propName = (e.Column.Binding as Microsoft.UI.Xaml.Data.Binding)?.Path.Path;
+            var propName = ((e.Column as DataGridBoundColumn)?.Binding as Microsoft.UI.Xaml.Data.Binding)?.Path?.Path;
             if (propName == null) return;
 
             bool asc = e.Column.SortDirection != DataGridSortDirection.Ascending;

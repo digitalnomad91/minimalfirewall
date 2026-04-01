@@ -89,7 +89,7 @@ namespace MinimalFirewall
 
         #endregion
 
-        private readonly IntPtr _hwnd;
+        private IntPtr _hwnd;
         private NOTIFYICONDATA _nid;
         private bool _added;
         private IntPtr _lockedIcon = IntPtr.Zero;

@@ -63,6 +63,8 @@ namespace MinimalFirewall
             return Path.Combine(_activeRootDirectory, "settings.json");
         }
 
+        public static string GetStorageDirectory() => _activeRootDirectory;
+
         public static string GetExeDirectory() => _exeDirectory;
         public static string GetStandardAppDataDirectory() => _standardAppDataDirectory;
 

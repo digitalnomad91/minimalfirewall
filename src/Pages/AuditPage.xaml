@@ -51,7 +51,7 @@
             SelectionChanged="AuditDataGrid_SelectionChanged"
             Sorting="AuditDataGrid_Sorting">
             <controls:DataGrid.Columns>
-                <controls:DataGridTextColumn Header="Publisher" Binding="{Binding Rule.Publisher}" Width="140" />
+                <controls:DataGridTextColumn Header="Publisher" Binding="{Binding Publisher}" Width="140" />
                 <controls:DataGridTextColumn Header="Name" Binding="{Binding Rule.Name}" Width="200" />
                 <controls:DataGridTextColumn Header="Status" Binding="{Binding Type}" Width="100" />
                 <controls:DataGridTextColumn Header="Protocol" Binding="{Binding Rule.ProtocolName}" Width="80" />
